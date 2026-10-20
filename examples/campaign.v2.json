@@ -1,0 +1,18 @@
+{
+  "pipeline_version": 2,
+  "cycles": 15,
+  "attempts_per_stage": 2,
+  "gate_revisions": 1,
+  "pilot_max_requests": 100,
+  "timeout_seconds": 14400,
+  "verify_timeout_seconds": 3600,
+  "max_log_bytes": 67108864,
+  "max_snapshot_bytes": 2147483648,
+  "researcher": {"backend": "claude", "model": "opus"},
+  "critic": {"backend": "opencode", "model": "openai/gpt-6-astra#xhigh"},
+  "experiment": {
+    "base_url": "http://127.0.0.1:8787/v1",
+    "model": "qwen/qwen3.5-9b",
+    "context": 262144
+  }
+}
