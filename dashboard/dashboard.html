@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Research · Монитор кампании</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#10141d;color:#e7eaf0}*{box-sizing:border-box}body{max-width:1400px;margin:auto;padding:28px}header,.toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}h1{font-size:25px;margin:0}h2{font-size:16px;margin:0 0 16px}small,.muted{color:#a7b1c3}#connection{font-size:13px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:24px 0}.card,section{background:#191f2c;border:1px solid #30394b;border-radius:12px;padding:18px}.value{font-size:24px;margin-top:8px;overflow-wrap:anywhere}.models{display:flex;gap:20px;flex-wrap:wrap;font-size:13px;margin-bottom:22px}.steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}.step{padding:8px 12px;border-radius:8px;background:#202838;color:#a7b1c3}.step.active{background:#294d72;color:#c7e5ff;border:1px solid #7abaff}#error,#notice{white-space:pre-wrap;background:#4b272b;border:1px solid #a75a60;padding:14px;border-radius:10px;margin-bottom:18px}#notice{background:#463a22;border-color:#857044}.grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(280px,1fr);gap:16px}button,select{background:#252f42;color:#edf2ff;border:1px solid #4a5872;border-radius:7px;padding:8px;cursor:pointer}.toolbar{justify-content:flex-start;margin-bottom:12px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.65 ui-monospace,monospace;max-height:65vh;overflow:auto;margin:12px 0 0}#activity{max-height:45vh;overflow:auto}.event{padding:10px 0;border-bottom:1px solid #30394b;font-size:12px;overflow-wrap:anywhere}.ok{color:#83d9ae}.bad{color:#ffa0a5}.check{font-size:12px;margin:7px 0}#docpath{font-size:12px;overflow-wrap:anywhere}label{font-size:13px}footer{margin-top:18px;font-size:12px;color:#a7b1c3}@media(max-width:850px){.cards{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}body{padding:16px}}
+</style>
+<style>#alerts{border:1px solid #71b5e8;background:#20384d;border-radius:10px;padding:16px;margin:16px 0}#alerts p{margin:8px 0}.alarmbar{margin:16px 0;font-size:13px}.alarmbar small{margin-left:8px}</style>
+<header><div><h1>Research / <span id="campaign">…</span></h1><small>Автономная исследовательская кампания</small></div><div id="connection">Подключение…</div></header>
+<div class="toolbar alarmbar"><button id="alarms" aria-pressed="false">Включить сигналы</button><button id="test-alarm" disabled>Проверить сигнал</button><small id="alarm-state">Сообщения на странице включены. Для звука нажми «Включить сигналы».</small></div>
+<section id="alerts" hidden aria-live="polite"><h2>События кампании</h2><div id="alert-list"></div><button id="clear-alerts">Скрыть</button></section>
+<div class="cards"><div class="card">Состояние<div id="status" class="value">—</div></div><div class="card">Цикл<div id="cycle" class="value">—</div></div><div class="card">Стадия<div id="stage" class="value">—</div></div><div class="card">Последняя запись<div id="freshness" class="value">—</div></div></div>
+<div id="models" class="models"></div><div id="error" hidden></div><div id="notice" hidden></div><div id="steps" class="steps"></div>
+<details id="previous-failure" hidden style="margin-bottom:18px"><summary>Предыдущая ошибка / инструкция восстановления (не текущая блокировка)</summary><pre id="previous-failure-text"></pre></details>
+<section id="experiments-panel" hidden style="margin-bottom:18px"><h2 id="experiments-title">Экспериментальные прогоны</h2><div id="experiments"></div><small>Уникальные исходы: задача × условие × политика. Повторные записи partial/final/resume не суммируются. Запросы — записи accounting, не число независимых наблюдений. Полная шкала не означает успех гипотезы.</small></section>
+<div class="grid"><section><div class="toolbar"><label>Цикл <select id="cycles"></select></label><select id="documents" aria-label="Документ"></select><label><input id="follow" type="checkbox" checked> Следить за текущим циклом</label><button id="refresh">Обновить</button></div><div id="docpath" class="muted"></div><pre id="document">Загрузка…</pre></section><section><h2>Активность и попытки</h2><div id="activity"></div><h2 style="margin-top:22px">Последняя предварительная проверка</h2><div id="doctor"></div></section></div>
+<footer>Обновление каждые 5 секунд · Только чтение · Время записи — признак активности файлов, а не гарантия работоспособности агента. Стоимость отдельных квитанций не равна полному бюджету.</footer>
+<script>
+const $=id=>document.getElementById(id);
+const stages={research:'Обзор',plan:'Протокол',build:'Реализация',experiment:'Эксперименты',report:'Отчёт',verify:'Проверка',review:'Независимая критика',confirm:'Подтверждение'};
+Object.assign(stages,{idea_review:'Отбор идей',pilot_plan:'План пилота',pilot:'Пилот',pilot_review:'Критика пилота'});
+const statuses={running:'Работает',retrying:'Повтор',blocked:'Блокировка',completed:'Завершено',finished:'Завершено',exhausted:'Циклы исчерпаны'};
+const docs={progress:'Прогресс',hypotheses:'Гипотезы',protocol:'Протокол',results:'Результаты',report:'Отчёт',review:'Критика',verification:'Внешняя проверка',final:'Итог кампании',selection:'Отбор кандидатов'};
+Object.assign(docs,{candidates:'Реестр идей',idea_review:'Критика идей',pilot_plan:'План пилота',pilot_results:'Результаты пилота',pilot_review:'Критика пилота',materials:'Материалы по пяти оценкам'});
+let busy=false, selectionVersion=0;
+let alarms=false,audio=null,observedCampaign=null,seenEvents=new Set();
+const verdicts={accept:'принят',revise:'нужна доработка',pivot:'сменить подход',blocked:'заблокирован'};
+function completionEvents(data){
+ const events=(data.state.candidates||[]).map(c=>({id:'cycle-'+c.cycle,text:'Цикл '+c.cycle+' завершён. Критик: '+(verdicts[c.review?.verdict]||c.review?.verdict||'решение сохранено')+'.'}));
+ if(['completed','exhausted'].includes(data.state.status))events.push({id:'campaign-done-'+data.total_cycles,text:data.state.status==='completed'?'Кампания завершена. Выбран цикл '+data.state.winner+'.':'Кампания завершена: бюджет циклов исчерпан, подтверждённого победителя нет.'});
+ return events;
+}
+async function sound(){
+ if(!audio)return;
+ try{await audio.resume();if(audio.state!=='running')throw new Error('Audio suspended');for(const [delay,freq] of [[0,660],[.22,880],[.44,1100]]){const osc=audio.createOscillator(),gain=audio.createGain(),start=audio.currentTime+delay;osc.frequency.value=freq;gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.12,start+.02);gain.gain.exponentialRampToValueAtTime(.001,start+.18);osc.connect(gain);gain.connect(audio.destination);osc.start(start);osc.stop(start+.2);osc.onended=()=>{osc.disconnect();gain.disconnect();};}}
+ catch{$('alarm-state').textContent='Браузер приостановил звук. Нажми «Проверить сигнал»; сообщения на странице работают.';}
+}
+function announce(text,id){
+ $('alerts').hidden=false;$('alert-list').prepend(element('p',new Date().toLocaleTimeString('ru-RU')+' · '+text));while($('alert-list').children.length>10)$('alert-list').lastChild.remove();
+ if(!alarms)return;
+ void sound();
+ if('Notification' in window&&Notification.permission==='granted'){try{const n=new Notification('Research · '+$('campaign').textContent,{body:text,tag:'research-'+observedCampaign+'-'+id});n.onclick=()=>{window.focus();n.close();};}catch{$('alarm-state').textContent='Системное уведомление недоступно; звук и сообщение на странице остаются включены.';}}
+}
+function observeCompletions(data){
+ if(!data.state.status||!Array.isArray(data.state.candidates))return;
+ const events=completionEvents(data);
+ if(observedCampaign!==data.campaign){observedCampaign=data.campaign;seenEvents=new Set(events.map(e=>e.id));return;}
+ for(const event of events)if(!seenEvents.has(event.id)){seenEvents.add(event.id);announce(event.text,event.id);}
+}
+$('alarms').onclick=async()=>{
+ alarms=!alarms;$('alarms').textContent=alarms?'Выключить сигналы':'Включить сигналы';$('alarms').setAttribute('aria-pressed',String(alarms));$('test-alarm').disabled=!alarms;
+ if(!alarms){$('alarm-state').textContent='Звук и системные уведомления выключены. Сообщения на странице остаются.';return;}
+ try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){audio=audio||new Audio();await audio.resume();}}catch{audio=null;}
+ let permission='unavailable';if('Notification' in window){try{permission=await Notification.requestPermission();}catch{}}
+ if(!alarms)return;
+ $('alarm-state').textContent=(audio?'Звук включён. ':'Звук недоступен. ')+(permission==='granted'?'Системные уведомления включены.':'Системные уведомления не разрешены; сообщения будут на странице.');
+ void sound();
+};
+$('test-alarm').onclick=()=>announce('Тестовый сигнал — это не завершение цикла.','test');
+$('clear-alerts').onclick=()=>{$('alerts').hidden=true;};
+const date=t=>t?new Date(t*1000).toLocaleString('ru-RU'):'—';
+function element(tag,text,cls){const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;}
+async function get(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+function options(node,items,value){node.replaceChildren(...items.map(([id,text])=>{const n=element('option',text);n.value=id;return n;}));if(items.some(i=>i[0]===value))node.value=value;}
+async function update(){if(busy)return;busy=true;try{
+ const data=await get('/api/status'),s=data.state;
+ $('campaign').textContent=data.campaign;$('status').textContent=statuses[s.status]||s.status||'Нет состояния';$('cycle').textContent=(s.cycle||'—')+' / '+(data.total_cycles||'—');$('stage').textContent=stages[s.stage]||s.stage||'—';
+ observeCompletions(data);
+ $('models').replaceChildren(...Object.entries(data.models).map(([r,m])=>element('span',({researcher:'Исследователь',critic:'Критик',experiment:'Эксперимент'})[r]+': '+(m||'не задана'))));
+ $('steps').replaceChildren(...data.stages.map(x=>element('span',stages[x], 'step'+(x===s.stage?' active':''))));
+ const error=s.error||(['blocked','retrying'].includes(s.status)?s.last_failure:null);$('error').hidden=!error;$('error').textContent=error||'';
+ $('previous-failure').hidden=!s.last_failure||!!error;$('previous-failure-text').textContent=s.last_failure||'';
+ const runs=data.experiments||[];$('experiments-panel').hidden=!runs.length;$('experiments-title').textContent='Прогоны текущего цикла '+s.cycle;
+ $('experiments').replaceChildren(...runs.map(r=>{const box=element('div','','event');const pct=r.total?Math.round(100*r.done/r.total):null;box.append(element('div',r.run+' — '+r.done+' / '+(r.total??'?')+' исходов'+(pct===null?'':' · '+pct+'%')));if(r.total){const bar=document.createElement('progress');bar.max=r.total;bar.value=r.done;bar.style.width='100%';bar.setAttribute('aria-label',r.run);box.append(bar);}box.append(element('div',r.requests+' запросов · '+r.request_errors+' ошибок API · '+(r.updated?'запись '+date(r.updated):'ещё не запущен'),'muted'));return box;}));
+ const latest=Math.max(0,...runs.map(x=>x.updated),...data.activity.map(x=>x.updated),...data.cycles.flatMap(x=>x.documents.map(y=>y.updated)));
+ const age=Math.max(0,Math.round(data.time-latest));$('freshness').textContent=latest?(age<60?age+' с назад':Math.floor(age/60)+' мин назад'):'—';
+ $('notice').hidden=!(s.status==='running'&&latest&&age>900);$('notice').textContent='Более 15 минут нет записи в отслеживаемые файлы. Агент может ждать API или выполнять долгую команду; это не доказательство зависания.';
+ const current=String(s.cycle||1).padStart(2,'0');const selected=$('follow').checked?current:($('cycles').value||current);
+  options($('cycles'),data.cycles.map(c=>[c.id,'Цикл '+Number(c.id)+' · v'+(c.pipeline_version||1)+(s.candidates?.some(x=>x.cycle===Number(c.id)&&x.kind==='screened_out')?' · ранний отсев':'')]),selected);
+ const available=data.cycles.find(c=>c.id===$('cycles').value)?.documents||[];
+ options($('documents'),Object.entries(docs).map(([id,label])=>[id,label+(available.some(x=>x.id===id)?'':' · пока нет')]),$('documents').value||'progress');
+ $('activity').replaceChildren(...data.activity.map(x=>{let info='Цикл '+Number(x.cycle)+' · '+x.name+'\n'+date(x.updated)+' · '+x.bytes+' Б';if(x.ok!==undefined)info+=' · '+(x.ok?'OK':'Ошибка');if(x.error)info+='\n'+x.error;const n=element('div',info,'event');n.style.whiteSpace='pre-wrap';return n;}));
+ $('doctor').replaceChildren(element('small',date(data.doctor.time)),...Object.entries(data.doctor.checks||{}).map(([k,v])=>element('div',(v===true?'✓ ':v===false?'✕ ':'')+k+(typeof v==='object'?' '+JSON.stringify(v):''),'check '+(v===true?'ok':'bad'))));
+ const version=selectionVersion;const cycle=$('cycles').value||current,kind=$('documents').value||'progress';
+ try{const d=await get('/api/document?cycle='+encodeURIComponent(cycle)+'&kind='+encodeURIComponent(kind));if(version===selectionVersion){$('docpath').textContent=d.path+' · '+date(d.updated)+(d.truncated?' · показана часть файла':'');if($('document').textContent!==d.text){const bottom=$('document').scrollTop+$('document').clientHeight>=$('document').scrollHeight-40;$('document').textContent=d.text;if(bottom&&kind==='progress')$('document').scrollTop=$('document').scrollHeight;}}}catch{if(version===selectionVersion){$('document').textContent='Этот артефакт пока не создан или недоступен.';$('docpath').textContent='';}}
+ $('connection').textContent='Обновлено '+new Date().toLocaleTimeString('ru-RU');$('connection').className='ok';
+ }catch(e){$('connection').textContent='Нет обновления: '+e.message+' · показаны предыдущие данные';$('connection').className='bad';}finally{busy=false;}}
+for(const id of ['cycles','documents','follow'])$(id).addEventListener('change',()=>{selectionVersion++;if(id==='cycles')$('follow').checked=false;update();});$('refresh').onclick=update;
+update();setInterval(update,5000);
+</script>
+</html>
