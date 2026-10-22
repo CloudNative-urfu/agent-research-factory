@@ -1,0 +1,114 @@
+{
+  "nix/research.nix": {
+    "source": "nix-dots/modules/aspects/agent-harness/research.nix",
+    "sha256": "9aa5a643489873a7252673017ddce0fcf4296a2cda2808da360376c48b43c4c6"
+  },
+  "nix/_research/AGENTS.md": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/AGENTS.md",
+    "sha256": "04098e467bfc4ebcd471a68f54ef027b9401ae315980785062669ba1d27a5d8c"
+  },
+  "nix/_research/README.md": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/README.md",
+    "sha256": "0aef3a8df0d73afeee5cf9d867e96b9f0c24a2e835e32ee46cdf6fb273506785"
+  },
+  "nix/_research/WORKFLOW-V2.md": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/WORKFLOW-V2.md",
+    "sha256": "387117494e18e7555e6eab77382cec2b9aac614eb77738d16b2687637fa34f40"
+  },
+  "nix/_research/critic.md": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/critic.md",
+    "sha256": "bc0c3355a6de492ecdfc501ea6e4805be0b9f416fe3d4330462835f73a821083"
+  },
+  "nix/_research/experiment_runner.py": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/experiment_runner.py",
+    "sha256": "8ba35992eed13710c4479c19a5f6df275bbf0c74d5eab3f49b90efcbe14c8a93"
+  },
+  "nix/_research/factory.py": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/factory.py",
+    "sha256": "5bef5aab679250e49fcbdd7c52308b8fd6f9b84138cdb63f50b1213890f91075"
+  },
+  "nix/_research/llm_proxy.py": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/llm_proxy.py",
+    "sha256": "f99a4e03a4b0fc6cadb2d54070538b805ee67c9a85e5c75a85cedd7194ba83ba"
+  },
+  "nix/_research/mcp_probe.py": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/mcp_probe.py",
+    "sha256": "02dca01b91ccf8815bf8c7ef7b25ad01f10c4ae015cd1a8e5596215d3fda6080"
+  },
+  "nix/_research/openrouter.example.env": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/openrouter.example.env",
+    "sha256": "1a87ac6c1fa519876017a3f70ad7acf266242ccbe264fabf5909f789b3e01ad8"
+  },
+  "nix/_research/plugin/index.ts": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/plugin/index.ts",
+    "sha256": "86e5f84c7c7b672cf50b9c150e14a7eb33eb2011d201dfeffed4173e394e3bc5"
+  },
+  "nix/_research/test_claude_live.py": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/test_claude_live.py",
+    "sha256": "bd5f2096ba71b43741ae99870406ce60429a1b009d3a27cfceffe76603fb0555"
+  },
+  "nix/_research/test_experiment_runner.py": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/test_experiment_runner.py",
+    "sha256": "e80da924b136b0f68559252111f3082d94a6fa5d84aff61ed8aaf2011b9e3399"
+  },
+  "nix/_research/test_factory.py": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/test_factory.py",
+    "sha256": "d166d37fad7d5da79feb287e44645899975c46ad29277fbc5048bed3cb28226b"
+  },
+  "nix/_research/test_opencode_live.py": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/test_opencode_live.py",
+    "sha256": "1e2b868349e0ddff8df51e5e1a2dc09bf8046491e971c6d01dae79d8e22d8751"
+  },
+  "nix/_research/test_proxy.py": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/test_proxy.py",
+    "sha256": "9061754a59a178246541261fdf161bd4700b6e428256fe348b705e6a0263fe4f"
+  },
+  "nix/_research/test_worker_fixture.py": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/test_worker_fixture.py",
+    "sha256": "0b5d96821edefe80c518acdfb5e0b09d82f5c1451546073f08cb179a673cb1b6"
+  },
+  "nix/_research/test_workflow_v2.py": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/test_workflow_v2.py",
+    "sha256": "9aa132e38a63420bcb9d96fa8fff9e4a32ba4bf795f80b0e402d3cd44c603b04"
+  },
+  "nix/_research/workflow_v2.py": {
+    "source": "nix-dots/modules/aspects/agent-harness/_research/workflow_v2.py",
+    "sha256": "ff097f8441fac07a7b5d46623575de734f1b0c0914ef0ec26b93c8b90ad331c2"
+  },
+  "dashboard/dashboard.py": {
+    "source": "research-dashboard/dashboard.py",
+    "sha256": "fd5c12ba5c17d587a49150b100054cba9eb3144bb4b280bcc3ec6e35175d5666"
+  },
+  "dashboard/dashboard.html": {
+    "source": "research-dashboard/dashboard.html",
+    "sha256": "547e7a74110082454ec9f64a791b8638d398ef3a53ba7a34c2c0ad97cb3c8145"
+  },
+  "dashboard/test_dashboard.py": {
+    "source": "research-dashboard/test_dashboard.py",
+    "sha256": "64a40c3e6419e98a64ab7f0bda072e63328547934b6635545c0185e7dc78e7e8"
+  },
+  "dashboard/README.md": {
+    "source": "research-dashboard/README.md",
+    "sha256": "aad56a11c70cf60cb8fe230aa8a8b0d3efd8910a90db89db2121e21c69e8f380"
+  },
+  "docs/source/agent-defense-and-continuity.md": {
+    "source": "agent-defense-and-continuity.md",
+    "sha256": "47bddaff3ae7b46512f1f568c7b04e65f15925c5cd31cfc9e1d14d3fa23b76c3"
+  },
+  "docs/source/RESEARCH-PIPELINE.md": {
+    "source": "RESEARCH-PIPELINE.md",
+    "sha256": "22c791e7fb48e4c94b07218909accc595590c7ef04f2c310d0949e9fadeac755"
+  },
+  "docs/source/VALIDATION.md": {
+    "source": "VALIDATION.md",
+    "sha256": "bd6cde1b7b9a639a3ac16714775ebdf887c1365bc9654a0b6921d863b737d70d"
+  },
+  "docs/source/WORKFLOW-V2-PLAN.md": {
+    "source": "WORKFLOW-V2-PLAN.md",
+    "sha256": "336a6932490dbe908c40ebe4bdf1a97f75395688939ac9240e52551c53897d6e"
+  },
+  "examples/campaign.original.json": {
+    "source": "campaign.example.json",
+    "sha256": "946a097d64d86ccfa35da8253ca67786781c08c7f670abfdd0a7ef248b3d0b78"
+  }
+}
