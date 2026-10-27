@@ -121,7 +121,6 @@
               {
                 nativeBuildInputs = [
                   pkgs.python3
-                  pkgs.bubblewrap
                 ];
               }
               ''
@@ -129,6 +128,22 @@
                 python3 ${./scripts/test-offline.py} ${self}
                 touch "$out"
               '';
+          sandbox = pkgs.testers.runNixOSTest {
+            name = "research-sandbox-tests";
+            nodes.machine = {
+              environment.systemPackages = [
+                pkgs.python3
+                pkgs.bubblewrap
+              ];
+              users.users.researcher.isNormalUser = true;
+              system.stateVersion = "26.05";
+            };
+            testScript = ''
+              machine.wait_for_unit("multi-user.target")
+              machine.succeed("su - researcher -c 'bwrap --unshare-pid --ro-bind / / --dev /dev --proc /proc -- true'")
+              machine.succeed("su - researcher -c 'python3 -B ${./scripts/test-offline.py} ${self}'")
+            '';
+          };
           dashboard =
             pkgs.runCommand "research-dashboard-tests"
               {
