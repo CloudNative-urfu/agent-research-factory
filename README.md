@@ -17,6 +17,37 @@
 - [Проверки и воспроизводимость](docs/VALIDATION.md)
 - [Происхождение и подготовка истории](docs/PROVENANCE.md)
 
+## Установка dashboard
+
+Dashboard поставляется отдельным пакетом `research-dashboard` и не устанавливается
+при подключении аспекта `agent-research`. Добавь его в Home Manager-конфигурацию
+пользователя, используя имя flake-инпута из своей конфигурации:
+
+```nix
+{ inputs, pkgs, ... }:
+{
+  home.packages = [
+    inputs.agent-research-factory.packages.${pkgs.stdenv.hostPlatform.system}.research-dashboard
+  ];
+}
+```
+
+Здесь input называется `agent-research-factory`; в примере из
+[инструкции установки](docs/INSTALL.md) он называется `agent-research` — в таком
+случае замени имя в выражении выше.
+
+Для NixOS с интегрированным Home Manager примени конфигурацию выбранного хоста,
+например `book`, и запусти монитор существующей кампании:
+
+```sh
+sudo nixos-rebuild switch --flake .#book
+research-dashboard ~/.local/share/research-campaigns/defense
+```
+
+Открой <http://127.0.0.1:8788>. Остановка — `Ctrl+C`, другой порт — `--port 8789`.
+Dashboard читает состояние кампании и не запускает её самостоятельно.
+Подробности интерфейса: [dashboard/README.md](dashboard/README.md).
+
 ## Состав
 
 | Каталог | Содержимое |
