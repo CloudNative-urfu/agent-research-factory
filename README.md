@@ -11,6 +11,7 @@
 - [Установка и подключение в nix-dots](docs/INSTALL.md)
 - [Запуск, остановка и восстановление](docs/OPERATIONS.md)
 - [Методология и границы результатов](docs/METHODOLOGY.md)
+- [Режим deep_case: сборка полигона по докам кейса](docs/DEEP_CASE.md)
 - [Четыре командные задачи](docs/TASKS.md)
 - [Проверки и воспроизводимость](docs/VALIDATION.md)
 - [Происхождение и подготовка истории](docs/PROVENANCE.md)

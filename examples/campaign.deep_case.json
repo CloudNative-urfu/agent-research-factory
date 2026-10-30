@@ -1,0 +1,31 @@
+{
+  "mode": "deep_case",
+  "cycles": 1,
+  "attempts_per_stage": 3,
+  "fix_rounds": 3,
+  "timeout_seconds": 14400,
+  "verify_timeout_seconds": 3600,
+  "max_log_bytes": 67108864,
+  "max_snapshot_bytes": 2147483648,
+  "researcher": {"backend": "claude", "model": "opus"},
+  "critic": {"backend": "opencode", "model": "openai/gpt-6-astra#xhigh"},
+  "experiment": {
+    "base_url": "http://127.0.0.1:8787/v1",
+    "model": "qwen/qwen3.5-9b",
+    "context": 262144
+  },
+  "case": {
+    "repository": "https://github.com/CloudNative-urfu/darp.git",
+    "ref": "research",
+    "documents": [
+      "docs/guardrails-as-a-vector-of-attack.md",
+      "docs/guardrails_requirements.md",
+      "docs/guardrails-break-even.md"
+    ],
+    "key_requirements": [
+      "FR-1.2", "FR-1.3", "FR-1.5", "FR-1.6", "FR-1.7", "FR-1.8", "FR-1.9",
+      "FR-1.13", "FR-1.14", "FR-1.15", "FR-1.16", "FR-1.17", "FR-1.18", "FR-1.19",
+      "FR-1.24", "NFR-2.8", "NFR-2.9"
+    ]
+  }
+}
