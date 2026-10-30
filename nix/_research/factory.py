@@ -72,6 +72,8 @@ def default_config():
 
 
 def check_config(cfg):
+    if cfg.get('mode', 'research') not in ('research', 'deep_case'):
+        raise Invalid('mode must be research or deep_case')
     if type(cfg.get('pipeline_version', 1)) is not int or cfg.get('pipeline_version', 1) not in (1, 2):
         raise Invalid('pipeline_version must be 1 or 2')
     for key, default in (('gate_revisions', 1), ('pilot_max_requests', 100)):
@@ -92,6 +94,9 @@ def check_config(cfg):
 
 
 def initialize(root, brief, config):
+    if config.get('mode') == 'deep_case':
+        import deep_case
+        return deep_case.initialize(root, brief, config)
     check_config(config)
     root = Path(root).resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -327,7 +332,7 @@ def sandbox(argv, work, campaign):
                 raise Invalid('Writable runtime path must not contain campaign or entire home')
             mounts += ['--bind', str(path), str(path)]
     readonly = []
-    for name in ('brief.md', 'handoff.json', 'candidate', 'prior-evidence', 'protocol-frozen.json', 'pilot-frozen.json', 'workflow-contract.json', 'approved-inputs.json'):
+    for name in ('brief.md', 'handoff.json', 'case', 'candidate', 'prior-evidence', 'protocol-frozen.json', 'pilot-frozen.json', 'workflow-contract.json', 'approved-inputs.json'):
         path = work / name
         if path.exists():
             readonly += ['--ro-bind', str(path), str(path)]
@@ -587,6 +592,9 @@ def extend(root, cycles, swap_agents=False, pipeline_version=None):
 
 def run(root, invoke, verify, retry=False, preflight=None):
     root = Path(root).resolve()
+    if load(root / 'campaign.json').get('mode') == 'deep_case':
+        import deep_case
+        return deep_case.run(root, invoke, verify, retry, preflight)
     with lock(root):
         state, cfg = load(root / 'state.json'), load(root / 'campaign.json')
         check_config(cfg)
@@ -917,4 +925,5 @@ def main():
 
 
 if __name__ == '__main__':
+    sys.modules['factory'] = sys.modules[__name__]  # deep_case imports the controller by name; keep one Blocked/Invalid
     sys.exit(main())

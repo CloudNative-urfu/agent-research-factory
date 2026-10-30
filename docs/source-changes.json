@@ -1,0 +1,17 @@
+{
+  "nix/_research/factory.py": {
+    "sha256": "786040443fa6f0ec1eeff2bc1c8c66dfc1e066cadb312e163a25c2d3a90f9874",
+    "issue": "https://github.com/CloudNative-urfu/agent-research-factory/issues/5",
+    "reason": "deep_case: проверка mode, передача init/run в deep_case.py, case/ только для чтения в песочнице"
+  },
+  "nix/_research/AGENTS.md": {
+    "sha256": "c8d6bf91059c2556ce4c5739c02137ef3ad2f0b5bfc96579fd03abcf633bf1cb",
+    "issue": "https://github.com/CloudNative-urfu/agent-research-factory/issues/5",
+    "reason": "deep_case: ремонт вместо отказа, общий рабочий каталог"
+  },
+  "nix/_research/critic.md": {
+    "sha256": "9c8e27574b157b067efb1419b48482ee29a68c773ffa540ec07319d7ad105c48",
+    "issue": "https://github.com/CloudNative-urfu/agent-research-factory/issues/5",
+    "reason": "deep_case: описательная критика без вердикта"
+  }
+}
