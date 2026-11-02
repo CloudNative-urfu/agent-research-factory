@@ -60,45 +60,6 @@
           ];
         };
       };
-      opencodeConfig = {
-        "$schema" = "https://opencode.ai/config.json";
-        update = "disable";
-        default_agent = "researcher";
-        websearch.provider = "random";
-        instructions = [ (toString rules) ];
-        plugins = [ (toString ./_research/plugin) ];
-        permissions = [
-          {
-            action = "*";
-            resource = "*";
-            effect = "allow";
-          }
-        ];
-        agents = {
-          researcher = {
-            mode = "primary";
-            description = "Автономный исследователь: гипотезы, эксперименты, MVP";
-          };
-          critic = {
-            mode = "all";
-            description = "Независимая проверка доказательств и воспроизводимости";
-            system = critic;
-          };
-        };
-        mcp.servers =
-          lib.mapAttrs (_: server: {
-            type = "local";
-            command = [ server.command ] ++ server.args;
-          }) localMcp
-          // {
-            context7 = {
-              type = "remote";
-              url = "https://mcp.context7.com/mcp";
-              oauth = false;
-            };
-          };
-        experimental.todo = true;
-      };
       claudeMcp = pkgs.writeText "research-mcp.json" (
         builtins.toJSON {
           mcpServers = lib.mapAttrs (_: server: server // { type = "stdio"; }) localMcp // {
@@ -114,37 +75,6 @@
           description = "Независимая проверка результатов исследования";
           prompt = critic;
         };
-      };
-      opencodeFile = pkgs.writeText "research-opencode.json" (builtins.toJSON opencodeConfig);
-      opencodeLauncher = pkgs.writeShellApplication {
-        name = "research-opencode";
-        runtimeInputs = tools;
-        text = ''
-          export XDG_CONFIG_HOME=${lib.escapeShellArg "${root}/opencode-config"}
-          export XDG_DATA_HOME=${lib.escapeShellArg "${config.xdg.dataHome}/agent-research"}
-          export XDG_STATE_HOME=${lib.escapeShellArg "${config.xdg.stateHome}/agent-research"}
-          export XDG_CACHE_HOME=${lib.escapeShellArg "${config.xdg.cacheHome}/agent-research"}
-          export OPENCODE_DISABLE_PROJECT_CONFIG=1
-          export OPENCODE_DISABLE_LSP_DOWNLOAD=true
-          unset OPENCODE_CONFIG OPENCODE_CONFIG_CONTENT OPENCODE_CONFIG_DIR OPENCODE_DB
-          export OPENCODE_CONFIG=${opencodeFile}
-          mkdir -p "$XDG_STATE_HOME"
-          (
-            flock 9
-            if [[ "$(${lib.getExe pkgs.opencode} service get disabled)" != "true" ]]; then
-              ${lib.getExe pkgs.opencode} service set disabled true >/dev/null
-            fi
-          ) 9>"$XDG_STATE_HOME/service-mode.lock"
-          case "''${1:-}" in
-            run|api)
-              command="$1"
-              shift
-              exec ${lib.getExe pkgs.opencode} "$command" --standalone "$@"
-              ;;
-            ""|-*|/*|./*|../*) exec ${lib.getExe pkgs.opencode} --standalone "$@" ;;
-            *) exec ${lib.getExe pkgs.opencode} "$@" ;;
-          esac
-        '';
       };
       claudeLauncher = pkgs.writeShellApplication {
         name = "research-claude";
@@ -172,7 +102,6 @@
         name = "research-factory";
         runtimeInputs = tools ++ [
           pkgs.bubblewrap
-          opencodeLauncher
           claudeLauncher
           experimentLauncher
         ];
@@ -199,7 +128,6 @@
     in
     {
       home.packages = [
-        opencodeLauncher
         claudeLauncher
         factoryLauncher
         proxyLauncher
@@ -218,8 +146,6 @@
           NoNewPrivileges = true;
         };
       };
-      xdg.configFile."agent-research/opencode-config/opencode/opencode.json".text =
-        builtins.toJSON opencodeConfig;
       systemd.user.services."research-campaign@" = {
         Unit = {
           Description = "Research campaign %i";

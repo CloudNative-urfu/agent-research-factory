@@ -65,7 +65,7 @@ def default_config():
     return {'cycles': 5, 'attempts_per_stage': 2, 'timeout_seconds': 14400,
             'verify_timeout_seconds': 3600, 'max_log_bytes': 67108864,
             'max_snapshot_bytes': 2147483648,
-            'researcher': {'backend': 'opencode', 'model': ''},
+            'researcher': {'backend': 'claude', 'model': 'opus'},
             'critic': {'backend': 'claude', 'model': 'opus'},
             'experiment': {'base_url': f'http://127.0.0.1:{llm_proxy.PORT}/v1',
                            'model': llm_proxy.MODEL, 'context': 262144}}
@@ -817,7 +817,8 @@ def finish(root, state, candidate, confirmation=None):
 
 def doctor(root, cfg, live=False):
     checks = {}
-    for executable in ('research-opencode', 'research-claude', 'bwrap', 'python3', 'git', 'curl', 'uv', 'bun'):
+    launchers = sorted({'research-' + cfg[role]['backend'] for role in ('researcher', 'critic')})
+    for executable in (*launchers, 'bwrap', 'python3', 'git', 'curl', 'uv', 'bun'):
         checks[executable] = bool(shutil.which(executable))
         work = root / 'doctor'
     work.mkdir(parents=True, exist_ok=True)
@@ -829,14 +830,6 @@ def doctor(root, cfg, live=False):
         checks.update(mcp_probe.checks())
         runtime = Runtime(root, cfg | {'timeout_seconds': min(cfg['timeout_seconds'], 180),
                                        'verify_timeout_seconds': 120})
-        search_log = work / 'websearch.json'
-        try:
-            result = runtime.verify(work, ['research-opencode', 'api', 'post', '/api/websearch',
-                '--data', json.dumps({'query': 'AgentDojo prompt injection benchmark', 'providerID': 'tinyfish'})], search_log)
-            checks['websearch'] = result['ok'] and bool(load(search_log).get('data', {}).get('results'))
-        except (Blocked, Invalid, OSError, ValueError, subprocess.SubprocessError) as exc:
-            checks['websearch'] = False
-            checks['websearch_error'] = type(exc).__name__
         url, model = os.environ.get('RESEARCH_LLM_BASE_URL'), os.environ.get('RESEARCH_LLM_MODEL')
         if not url or not model:
             checks['local_llm'] = False

@@ -4,7 +4,6 @@
 
 ```sh
 research-claude
-research-opencode
 ```
 
 Учётные данные хранятся вне репозитория. Ключ экспериментальной Qwen в OpenRouter

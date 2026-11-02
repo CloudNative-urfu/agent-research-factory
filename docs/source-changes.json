@@ -1,13 +1,17 @@
 {
   "nix/_research/factory.py": {
-    "sha256": "786040443fa6f0ec1eeff2bc1c8c66dfc1e066cadb312e163a25c2d3a90f9874",
+    "sha256": "179bc322fd9da40b95de2a83ec29470819db82ec52fe03e9e9f50d16febe01f4",
     "issue": "https://github.com/CloudNative-urfu/agent-research-factory/issues/5",
-    "reason": "deep_case: проверка mode, передача init/run в deep_case.py, case/ только для чтения в песочнице"
+    "reason": "deep_case: маршрутизация и read-only case; Claude по умолчанию, doctor проверяет только выбранные CLI, без OpenCode websearch"
   },
   "nix/_research/AGENTS.md": {
-    "sha256": "c8d6bf91059c2556ce4c5739c02137ef3ad2f0b5bfc96579fd03abcf633bf1cb",
+    "sha256": "9463894b07ade75f19335f8f140fd88d1ea85938b83ce70014c7d78dd35f5007",
     "issue": "https://github.com/CloudNative-urfu/agent-research-factory/issues/5",
-    "reason": "deep_case: ремонт вместо отказа, общий рабочий каталог"
+    "reason": "deep_case: ремонт вместо отказа, максимум усилий на прототип в рамках бюджета; поиск через Claude"
+  },
+  "nix/research.nix": {
+    "sha256": "0c5dc36ded1806b07579f067a203b05e68522090265f8725560753ced94d6346",
+    "reason": "Установка только Claude: удалены launcher, конфигурация и runtime-зависимость OpenCode"
   },
   "nix/_research/critic.md": {
     "sha256": "9c8e27574b157b067efb1419b48482ee29a68c773ffa540ec07319d7ad105c48",

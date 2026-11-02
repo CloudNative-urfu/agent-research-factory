@@ -9,7 +9,7 @@
   "max_log_bytes": 67108864,
   "max_snapshot_bytes": 2147483648,
   "researcher": {"backend": "claude", "model": "opus"},
-  "critic": {"backend": "opencode", "model": "openai/gpt-6-astra#xhigh"},
+  "critic": {"backend": "claude", "model": "opus"},
   "experiment": {
     "base_url": "http://127.0.0.1:8787/v1",
     "model": "qwen/qwen3.5-9b",

@@ -59,7 +59,7 @@ nix run .#research-dashboard -- ~/.local/share/research-campaigns/defense
 ```
 
 Standalone-пакеты не создают профили авторизации: для реальной работы контроллера
-нужны доступные в PATH `research-claude`, `research-opencode` и
+нужны доступные в PATH `research-claude` и
 `research-experiment`, настроенные writable paths и отдельная авторизация.
 Полную настройку делает Home Manager-модуль. `--help`, `status` и работа
 экспериментального исполнителя доступны отдельно.
