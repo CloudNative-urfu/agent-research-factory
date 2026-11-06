@@ -128,7 +128,9 @@ def check_api(base):
         'stream': {'stream': True},
     }
     for name, options in probes.items():
-        body = {'model': MODEL, 'messages': [{'role': 'user', 'content': 'Reply with {"ok":true}. If a tool is provided, call it with ok=true.'}],
+        prompt = ('Call the probe function exactly once with ok=true. Do not answer with text or JSON content; '
+                  'complete this task by making the tool call.' if name == 'tools' else 'Reply with {"ok":true}.')
+        body = {'model': MODEL, 'messages': [{'role': 'user', 'content': prompt}],
                 'max_tokens': 2048, **options}
         try:
             request = urllib.request.Request(base + '/chat/completions', data=json.dumps(body).encode(),
@@ -166,7 +168,13 @@ def check_api(base):
             if name == 'json':
                 checks[name] = json.loads(message['content']) == {'ok': True}
             elif name == 'tools':
-                call = message['tool_calls'][0]['function']
+                calls = message.get('tool_calls')
+                if not isinstance(calls, list) or len(calls) != 1:
+                    checks[name] = False
+                    errors[name] = {'message': 'Expected exactly one probe tool call',
+                                    'finish_reason': data['choices'][0].get('finish_reason')}
+                    continue
+                call = calls[0]['function']
                 checks[name] = call['name'] == 'probe' and json.loads(call['arguments']) == {'ok': True}
             else:
                 checks[name] = isinstance(message.get('content'), str) and bool(message['content'].strip())

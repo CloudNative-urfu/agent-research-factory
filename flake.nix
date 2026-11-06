@@ -52,7 +52,10 @@
                 pkgs.uv
                 pkgs.bun
               ];
-              text = ''exec ${pkgs.python3}/bin/python3 ${./nix/_research}/${file} "$@"'';
+              text = ''
+                export PYTHONTZPATH=${pkgs.tzdata}/share/zoneinfo
+                exec ${pkgs.python3}/bin/python3 ${./nix/_research}/${file} "$@"
+              '';
             };
         in
         {
@@ -110,6 +113,7 @@
         {
           module-exports =
             assert builtins.hasAttr "research-campaign@" home.config.systemd.user.services;
+            assert (home.config.systemd.user.services."research-autopilot@".Install.WantedBy or [ ]) == [ ];
             assert builtins.hasAttr "research-llm-proxy"
               host.config.home-manager.users.researcher.systemd.user.services;
             pkgs.runCommand "research-module-exports" { } ''
@@ -125,6 +129,7 @@
               }
               ''
                 export PYTHONDONTWRITEBYTECODE=1
+                export PYTHONTZPATH=${pkgs.tzdata}/share/zoneinfo
                 python3 ${./scripts/test-offline.py} ${self}
                 touch "$out"
               '';

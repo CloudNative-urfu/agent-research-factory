@@ -1,8 +1,28 @@
 {
+  "dashboard/dashboard.py": {
+    "sha256": "1f5c26e6953526c732a7239020c371af5e5c565fcc980fa6d98c950948962c56",
+    "reason": "Передача сохранённого ожидания лимита в API"
+  },
+  "dashboard/dashboard.html": {
+    "sha256": "8e2b8f9df8c9bc4bb0ec1b77bd7ccf4587465d61aa82e8dde047680c392ca794",
+    "reason": "Отображение времени автоматического продолжения после лимита"
+  },
+  "dashboard/test_dashboard.py": {
+    "sha256": "f14f708207898389d61c4eb38bbb5b0acf68e3ef903697dea43daa73d81dada6",
+    "reason": "Регрессия передачи ожидания лимита"
+  },
+  "nix/_research/llm_proxy.py": {
+    "sha256": "bbd19453622b0d199634a70289956bcac217121146d74bb87b93c4c2c2dbde38",
+    "reason": "Однозначный tools-промпт preflight; явная диагностика отсутствующих и лишних вызовов"
+  },
+  "nix/_research/test_proxy.py": {
+    "sha256": "ffbe25a4e0ca7b25f3e8b784be3f92a6a5ebf64971e74afc17948ace1a9e7a6e",
+    "reason": "Регрессии отсутствующего tool_calls и нескольких вызовов в preflight"
+  },
   "nix/_research/factory.py": {
-    "sha256": "179bc322fd9da40b95de2a83ec29470819db82ec52fe03e9e9f50d16febe01f4",
+    "sha256": "2b122b0cdbea90d0a988e178f99988742aec6d43dd5724c34e2a26c9781813ed",
     "issue": "https://github.com/CloudNative-urfu/agent-research-factory/issues/5",
-    "reason": "deep_case: маршрутизация и read-only case; Claude по умолчанию, doctor проверяет только выбранные CLI, без OpenCode websearch"
+    "reason": "deep_case, Claude, ожидание лимитов; команда autopilot для оценки улучшений перед следующей ревизией"
   },
   "nix/_research/AGENTS.md": {
     "sha256": "9463894b07ade75f19335f8f140fd88d1ea85938b83ce70014c7d78dd35f5007",
@@ -10,8 +30,8 @@
     "reason": "deep_case: ремонт вместо отказа, максимум усилий на прототип в рамках бюджета; поиск через Claude"
   },
   "nix/research.nix": {
-    "sha256": "0c5dc36ded1806b07579f067a203b05e68522090265f8725560753ced94d6346",
-    "reason": "Установка только Claude: удалены launcher, конфигурация и runtime-зависимость OpenCode"
+    "sha256": "6f0076a8ee901782a360c6f7700bce3208f746ad86b245c087ce17e9ecc387dd",
+    "reason": "Claude, tzdata, шаблон автопилота без WantedBy: запускаются только явно выбранные экземпляры"
   },
   "nix/_research/critic.md": {
     "sha256": "9c8e27574b157b067efb1419b48482ee29a68c773ffa540ec07319d7ad105c48",

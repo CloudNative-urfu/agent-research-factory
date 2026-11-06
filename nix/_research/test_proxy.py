@@ -106,6 +106,19 @@ class ProxyTests(unittest.TestCase):
         self.assertNotIn('reasoning', self.up.body)
         self.assertGreaterEqual(self.up.body['max_tokens'], 1024)
 
+    def test_preflight_reports_missing_tool_call(self):
+        self.up.payload = b'{"choices":[{"finish_reason":"stop","message":{"content":"{\\"ok\\":true}"}}]}'
+        report = check_api(f'http://127.0.0.1:{self.proxy.server_port}/v1')
+        self.assertFalse(report['checks']['tools'])
+        self.assertEqual(report['errors']['tools']['message'], 'Expected exactly one probe tool call')
+        self.assertEqual(report['errors']['tools']['finish_reason'], 'stop')
+
+    def test_preflight_rejects_extra_tool_calls(self):
+        call = {'function': {'name': 'probe', 'arguments': '{"ok":true}'}}
+        self.up.payload = json.dumps({'choices': [{'message': {'tool_calls': [call, call]}}]}).encode()
+        report = check_api(f'http://127.0.0.1:{self.proxy.server_port}/v1')
+        self.assertFalse(report['checks']['tools'])
+
     def test_preflight_reports_http_errors(self):
         self.up.status = 400
         self.up.payload = b'{"error":{"message":"Provider returned error","metadata":{"provider_name":"Together","raw":"{\\"error\\":{\\"message\\":\\"Input validation error\\"}}"}}}'

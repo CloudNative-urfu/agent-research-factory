@@ -135,7 +135,7 @@ def experiment_progress(root, cycle):
 
 def snapshot(root):
     stored_state = read_json(root, 'state.json', limit=64 * 1024 * 1024)
-    state = {key: stored_state.get(key) for key in ('status', 'cycle', 'stage', 'winner', 'error', 'last_failure')}
+    state = {key: stored_state.get(key) for key in ('status', 'cycle', 'stage', 'winner', 'error', 'last_failure', 'rate_limit')}
     state['candidates'] = [{'cycle': c.get('cycle'), 'kind': c.get('kind', 'full'), 'review': {'verdict': c.get('review', {}).get('verdict')}}
                            for c in stored_state.get('candidates', [])]
     cfg = read_json(root, 'campaign.json')

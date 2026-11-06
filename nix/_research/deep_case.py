@@ -376,10 +376,8 @@ def run(root, invoke, verify, retry=False, preflight=None):
         case = load(root / 'case' / 'case.json')
         if state['status'] == 'completed':
             return
-        if preflight is not None and not preflight()['ok']:
-            state.update(status='blocked', error='Live preflight failed; see doctor.json')
-            save(root / 'state.json', state)
-            raise Blocked(state['error'])
+        factory.restore_limit(root, state, cfg)
+        factory.preflight_ready(root, state, preflight)
         base = root / 'cycles' / '01'
         work = base / 'work'
         prepare(root, base, work, cfg)
@@ -390,8 +388,12 @@ def run(root, invoke, verify, retry=False, preflight=None):
             save(root / 'state.json', state)
         try:
             while state['stage'] != 'done':
+                factory.limits.wait(root, state, save)
                 step(root, base, work, state, cfg, case, invoke, verify)
         except (Blocked, KeyboardInterrupt) as exc:
+            if state.get('rate_limit'):
+                save(root / 'state.json', state)
+                raise Blocked('Interrupted while waiting for Claude limit reset') from exc
             state.update(status='blocked', error=str(exc) or 'Interrupted; checkpoint retained')
             journal(root, step=state['stage'], event='blocked', detail=state['error'])
             save(root / 'state.json', state)
@@ -457,6 +459,10 @@ def step(root, base, work, state, cfg, case, invoke, verify):
     if not result.get('ok') and not result.get('timeout'):
         # A provider/runtime failure says nothing about the polygon: it must not burn the repair budget.
         record['attempts'] -= 1
+        if cfg[role]['backend'] == 'claude' and factory.limits.is_limit(result.get('error')):
+            factory.limits.schedule(root, state, result['error'], save)
+            journal(root, step=name, event='waiting_limit', **state['rate_limit'])
+            return
         record['infra_failures'] += 1
         journal(root, step=name, event='worker_failed', attempt=attempt, detail=result.get('error'))
         save(root / 'state.json', state)

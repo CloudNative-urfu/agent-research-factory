@@ -116,6 +116,7 @@
               ]
             )
           }
+          export PYTHONTZPATH=${pkgs.tzdata}/share/zoneinfo
           exec ${lib.getExe pkgs.python3} ${./_research}/factory.py "$@"
         '';
       };
@@ -159,6 +160,19 @@
           Restart = "on-failure";
           RestartPreventExitStatus = [ 2 ];
           RestartSec = 10;
+          KillMode = "control-group";
+          TimeoutStopSec = 15;
+          UMask = "0077";
+        };
+      };
+      systemd.user.services."research-autopilot@" = {
+        Unit.Description = "Reviewed improvement autopilot %i";
+        Service = {
+          Type = "simple";
+          ExecStart = "${lib.getExe factoryLauncher} autopilot %h/.local/share/research-autopilot/%i";
+          Restart = "on-failure";
+          RestartPreventExitStatus = [ 2 ];
+          RestartSec = 30;
           KillMode = "control-group";
           TimeoutStopSec = 15;
           UMask = "0077";

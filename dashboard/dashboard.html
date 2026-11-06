@@ -20,7 +20,7 @@
 const $=id=>document.getElementById(id);
 const stages={research:'Обзор',plan:'Протокол',build:'Реализация',experiment:'Эксперименты',report:'Отчёт',verify:'Проверка',review:'Независимая критика',confirm:'Подтверждение'};
 Object.assign(stages,{idea_review:'Отбор идей',pilot_plan:'План пилота',pilot:'Пилот',pilot_review:'Критика пилота'});
-const statuses={running:'Работает',retrying:'Повтор',blocked:'Блокировка',completed:'Завершено',finished:'Завершено',exhausted:'Циклы исчерпаны'};
+const statuses={running:'Работает',waiting_limit:'Ожидание лимита Claude',retrying:'Повтор',blocked:'Блокировка',completed:'Завершено',finished:'Завершено',exhausted:'Циклы исчерпаны'};
 const docs={progress:'Прогресс',hypotheses:'Гипотезы',protocol:'Протокол',results:'Результаты',report:'Отчёт',review:'Критика',verification:'Внешняя проверка',final:'Итог кампании',selection:'Отбор кандидатов'};
 Object.assign(docs,{candidates:'Реестр идей',idea_review:'Критика идей',pilot_plan:'План пилота',pilot_results:'Результаты пилота',pilot_review:'Критика пилота',materials:'Материалы по пяти оценкам'});
 let busy=false, selectionVersion=0;
@@ -66,7 +66,8 @@ function options(node,items,value){node.replaceChildren(...items.map(([id,text])
 async function update(){if(busy)return;busy=true;try{
  const data=await get('/api/status'),s=data.state;
  $('campaign').textContent=data.campaign;$('status').textContent=statuses[s.status]||s.status||'Нет состояния';$('cycle').textContent=(s.cycle||'—')+' / '+(data.total_cycles||'—');$('stage').textContent=stages[s.stage]||s.stage||'—';
- observeCompletions(data);
+  observeCompletions(data);
+  if(s.status==='waiting_limit'&&s.rate_limit)$('status').textContent+=' до '+date(s.rate_limit.resume_at);
  $('models').replaceChildren(...Object.entries(data.models).map(([r,m])=>element('span',({researcher:'Исследователь',critic:'Критик',experiment:'Эксперимент'})[r]+': '+(m||'не задана'))));
  $('steps').replaceChildren(...data.stages.map(x=>element('span',stages[x], 'step'+(x===s.stage?' active':''))));
  const error=s.error||(['blocked','retrying'].includes(s.status)?s.last_failure:null);$('error').hidden=!error;$('error').textContent=error||'';

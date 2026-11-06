@@ -16,6 +16,7 @@ import urllib.request
 from pathlib import Path
 
 import llm_proxy
+import limits
 import mcp_probe
 import workflow_v2
 
@@ -590,6 +591,33 @@ def extend(root, cycles, swap_agents=False, pipeline_version=None):
         return archive
 
 
+def restore_limit(root, state, cfg):
+    if state.get('status') == 'blocked' and limits.is_limit(state.get('error')) and not state.get('rate_limit'):
+        if all(cfg[role]['backend'] == 'claude' for role in ('researcher', 'critic')):
+            limits.schedule(root, state, state['error'], save, observed_at=(root / 'state.json').stat().st_mtime)
+
+
+def preflight_ready(root, state, preflight):
+    while True:
+        limits.wait(root, state, save)
+        if preflight is None:
+            return
+        report = preflight()
+        if report['ok']:
+            return
+        checks = report.get('checks', {})
+        failed = [key for key, value in checks.items() if not key.endswith('_error') and value is not True]
+        role_keys = {'researcher_tool_call', 'critic_tool_call'}
+        if failed and all(key in role_keys and limits.is_limit(checks.get(key.replace('_tool_call', '_error'))) for key in failed):
+            errors = [checks[key.replace('_tool_call', '_error')] for key in failed]
+            error = max(errors, key=lambda item: limits.deadline(item, time.time()))
+            limits.schedule(root, state, error, save)
+            continue
+        state.update(status='blocked', error='Live preflight failed; see doctor.json')
+        save(root / 'state.json', state)
+        raise Blocked(state['error'])
+
+
 def run(root, invoke, verify, retry=False, preflight=None):
     root = Path(root).resolve()
     if load(root / 'campaign.json').get('mode') == 'deep_case':
@@ -604,10 +632,8 @@ def run(root, invoke, verify, retry=False, preflight=None):
         stages = workflow_v2.STAGES if version == 2 else STAGES
         if state['status'] in ('completed', 'exhausted'):
             return
-        if preflight is not None and not preflight()['ok']:
-            state.update(status='blocked', error='Live preflight failed; see doctor.json')
-            save(root / 'state.json', state)
-            raise Blocked(state['error'])
+        restore_limit(root, state, cfg)
+        preflight_ready(root, state, preflight)
         if retry:
             prefix = f'{state["cycle"]}:{state["stage"]}:{state["confirm_index"]}'
             previous = {k: v for k, v in state['attempts'].items() if k == prefix or k.startswith(prefix + ':')}
@@ -616,6 +642,7 @@ def run(root, invoke, verify, retry=False, preflight=None):
                 state['attempts'][key] = 0
             save(root / 'state.json', state)
         while True:
+            limits.wait(root, state, save)
             cycle, stage = state['cycle'], state['stage']
             base = root / 'cycles' / f'{cycle:02d}'
             base.mkdir(parents=True, exist_ok=True)
@@ -699,7 +726,13 @@ def run(root, invoke, verify, retry=False, preflight=None):
                     save(base / 'verification.json', result)
                     # Failed verification is evidence for the critic, not an infrastructure retry.
                 else:
-                    result = invoke('critic' if stage in ('review', 'confirm', *workflow_v2.EARLY) else 'researcher', stage, work, task, log)
+                    role = 'critic' if stage in ('review', 'confirm', *workflow_v2.EARLY) else 'researcher'
+                    result = invoke(role, stage, work, task, log)
+                    if not result.get('ok') and cfg[role]['backend'] == 'claude' and limits.is_limit(result.get('error')):
+                        save(log.with_suffix('.receipt.json'), result)
+                        state['attempts'][key] -= 1
+                        limits.schedule(root, state, result['error'], save)
+                        continue
                     if not result.get('ok'):
                         raise Invalid(result.get('error') or 'Worker failed')
                     if version == 2 and stage in workflow_v2.EARLY:
@@ -858,6 +891,8 @@ def doctor(root, cfg, live=False):
                 result = runtime.invoke(role, 'doctor', role_work,
                                         'Вызови shell и запиши ровно PROBE_OK в probe.txt. Затем заверши.', work / f'{role}.jsonl')
                 checks[role + '_tool_call'] = result['ok'] and marker.exists() and marker.read_text().strip() == 'PROBE_OK'
+                if not result['ok'] and cfg[role]['backend'] == 'claude':
+                    checks[role + '_error'] = result.get('error') or 'Worker failed'
             except (Blocked, Invalid, OSError, ValueError, subprocess.SubprocessError) as exc:
                 checks[role + '_tool_call'] = False
                 checks[role + '_error'] = type(exc).__name__
@@ -879,7 +914,7 @@ def main():
     p.add_argument('--cycles', type=int, required=True, help='New total cycle budget')
     p.add_argument('--swap-agents', action='store_true')
     p.add_argument('--pipeline-version', type=int, choices=(1, 2))
-    for name in ('run', 'status', 'doctor'):
+    for name in ('run', 'status', 'doctor', 'autopilot'):
         p = sub.add_parser(name)
         p.add_argument('directory', type=Path)
         if name == 'run':
@@ -896,7 +931,10 @@ def main():
             print(json.dumps({'archive': str(archive), 'status': 'ready'}, ensure_ascii=False))
         elif args.command == 'status':
             state = load(root / 'state.json')
-            print(json.dumps({k: state.get(k) for k in ('status', 'cycle', 'stage', 'winner', 'error', 'last_failure')}, ensure_ascii=False, indent=2))
+            print(json.dumps({k: state.get(k) for k in ('status', 'cycle', 'stage', 'winner', 'error', 'last_failure', 'rate_limit')}, ensure_ascii=False, indent=2))
+        elif args.command == 'autopilot':
+            import autopilot
+            autopilot.run(root)
         else:
             cfg = load(root / 'campaign.json')
             check_config(cfg)

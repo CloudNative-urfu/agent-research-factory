@@ -23,6 +23,13 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(data['cycles'][0]['documents'][0]['id'], 'progress')
         self.assertIn('<script>', document(self.root, 'progress', '01')['text'])
 
+    def test_limit_wait_is_visible(self):
+        pending = {'resume_at': 1793722800, 'stage': 'build:agent', 'reason': 'usage_limit_reached'}
+        (self.root / 'state.json').write_text(json.dumps({'status': 'waiting_limit', 'rate_limit': pending}))
+        data = snapshot(self.root)
+        self.assertEqual(data['state']['status'], 'waiting_limit')
+        self.assertEqual(data['state']['rate_limit'], pending)
+
     def test_truncated_and_refused_are_finished_not_api_errors(self):
         directory = self.root / 'cycles/01/work/artifacts/probe'
         directory.mkdir(parents=True)
