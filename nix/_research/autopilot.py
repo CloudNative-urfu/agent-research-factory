@@ -42,6 +42,17 @@ def validate_plan(work):
             raise factory.Invalid('Task IDs must be unique slugs')
         ids.add(task['id'])
         factory.evidence(work, task.get('evidence'))
+    if (work / 'candidate/evaluation-method.md').exists():
+        protocol = factory.object_json(factory.safe_file(work, 'artifacts/evaluation-protocol.json'))
+        text_fields(protocol, ('process', 'trust_boundaries', 'baseline', 'attack_admission',
+                               'independence', 'measurement'))
+        if protocol.get('phase') not in ('foundation', 'evaluation'):
+            raise factory.Invalid('Unknown evaluation phase')
+        factory.evidence(work, protocol.get('evidence'))
+        required = protocol.get('task_ids')
+        deep_case.strings(required, 'task_ids')
+        if not required or len(required) != len(set(required)) or set(required) - ids:
+            raise factory.Invalid('Evaluation protocol needs known unique task IDs')
     return plan
 
 
@@ -67,6 +78,15 @@ def validate_review(work, plan):
         raise factory.Invalid('Revise needs actionable feedback')
     if decision == 'pivot':
         text_fields(result, ('pivot_evidence',))
+    if (work / 'candidate/evaluation-method.md').exists():
+        realism = factory.object_json(factory.safe_file(work, 'artifacts/realism-review.json'))
+        text_fields(realism, ('rationale',))
+        factory.evidence(work, realism.get('evidence'))
+        if type(realism.get('acceptable')) is not bool:
+            raise factory.Invalid('Realism acceptance must be boolean')
+        protocol = factory.object_json(factory.safe_file(work, 'candidate/proposal/evaluation-protocol.json'))
+        if decision == 'proceed' and (not realism['acceptable'] or set(protocol['task_ids']) - set(ids)):
+            raise factory.Invalid('Proceed requires realism approval and all protocol tasks')
     return result
 
 
@@ -119,6 +139,7 @@ def prepare_inputs(source, root):
     ):
         shutil.copy2(factory.safe_file(source, relative), inputs / name)
     factory.save(inputs / 'provenance.json', identity)
+    shutil.copy2(Path(__file__).with_name('EVALUATION-METHOD.md'), inputs / 'evaluation-method.md')
     factory.save(root / 'inputs-manifest.json', factory.inventory(inputs, cfg['max_snapshot_bytes']))
     factory.save(marker, identity)
 
@@ -188,6 +209,8 @@ def assess(source, root, invoke=None):
                      'focus': 'Improve current solution; alternatives only as last resort'})
         prompt_name = 'IMPROVEMENT-BRAINSTORM.md' if stage == 'brainstorm' else 'IMPROVEMENT-REVIEW.md'
         prompt = Path(__file__).with_name(prompt_name).read_text()
+        if (candidate / 'evaluation-method.md').exists():
+            prompt += '\n\n' + (candidate / 'evaluation-method.md').read_text()
         if state.get('last_failure'):
             prompt += '\nИсправь ошибку предыдущей сдачи: ' + state['last_failure']
         role = 'researcher' if stage == 'brainstorm' else 'critic'
@@ -288,6 +311,10 @@ def prepare_revision(source, target, assessment):
         'Оцени достигнутую пользу, а не только количество тестов. Перечисли остатки и новые проблемы. '
         'После critique проход заканчивается; следующий план создаёт отдельный автопилот.\n'
     )
+    method = assessment / 'inputs/evaluation-method.md'
+    if method.exists():
+        shutil.copy2(method, inputs / 'evaluation-method.md')
+        brief += '\n\n' + method.read_text()
     for path in (staging / 'brief.md', work / 'brief.md'):
         path.write_text(brief)
     factory.save(staging / 'campaign.json', cfg)

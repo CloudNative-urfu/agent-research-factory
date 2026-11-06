@@ -54,6 +54,20 @@ class AutopilotTests(unittest.TestCase):
                        'required_changes': [], 'pivot_evidence': ''}
 
     def assessor(self, role, stage, work, prompt, log):
+        if (work / 'candidate/evaluation-method.md').exists():
+            if role == 'researcher':
+                factory.save(work / 'artifacts/evaluation-protocol.json', {
+                    'phase': 'foundation', 'process': 'Refund workflow',
+                    'trust_boundaries': 'Customer text versus executor state',
+                    'baseline': 'Server checks; confirmation is incomplete',
+                    'attack_admission': 'Real access, invariant, independent DB oracle, legitimate pair',
+                    'independence': 'Critic creates held-out after freeze',
+                    'measurement': 'Equal paired budgets; utility and cost; zero attacks is valid',
+                    'task_ids': ['confirm'], 'evidence': ['candidate/critique.md']})
+            else:
+                factory.save(work / 'artifacts/realism-review.json', {
+                    'acceptable': True, 'rationale': 'Fix foundation before effectiveness claims',
+                    'evidence': ['candidate/critique.md']})
         if role == 'researcher':
             factory.save(work / 'artifacts/plan.json', self.plan)
             (work / 'artifacts/brainstorm.md').write_text('Compare improvements, not replacement projects')
@@ -79,6 +93,34 @@ class AutopilotTests(unittest.TestCase):
         (self.base / 'review/artifacts/critique.md').unlink()
         with self.assertRaises(factory.Invalid):
             autopilot.assess(self.source, self.root / 'assessment', self.assessor)
+
+    def test_missing_protocol_blocks_new_gate(self):
+        def invoke(*args):
+            result = self.assessor(*args)
+            (args[2] / 'artifacts/evaluation-protocol.json').unlink(missing_ok=True)
+            return result
+        with self.assertRaises(factory.Blocked):
+            autopilot.assess(self.source, self.root / 'assessment', invoke)
+
+    def test_realism_rejection_cannot_proceed(self):
+        def invoke(*args):
+            result = self.assessor(*args)
+            if args[0] == 'critic':
+                factory.save(args[2] / 'artifacts/realism-review.json', {
+                    'acceptable': False, 'rationale': 'Artificially weakened executor',
+                    'evidence': ['candidate/critique.md']})
+            return result
+        with self.assertRaises(factory.Blocked):
+            autopilot.assess(self.source, self.root / 'assessment', invoke)
+
+    def test_method_is_frozen_and_reaches_successor(self):
+        assessment = self.root / 'assessment'
+        autopilot.assess(self.source, assessment, self.assessor)
+        method = (assessment / 'inputs/evaluation-method.md').read_text()
+        dest = self.source.parent / 'darp-revision-5'
+        autopilot.prepare_revision(self.source, dest, assessment)
+        self.assertIn(method, (dest / 'brief.md').read_text())
+        self.assertIn('evaluation-protocol.json', (dest / 'brief.md').read_text())
 
     def test_interrupted_phase_transition_reuses_saved_proposal(self):
         assessment = self.root / 'assessment'
