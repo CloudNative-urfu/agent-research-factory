@@ -328,6 +328,8 @@ def tick(root, invoke=None):
         'current': cfg['initial'], 'next_number': cfg['next_number'], 'status': 'watching'}
     if state['status'] == 'paused' or not cfg.get('enabled', True):
         return
+    if state.get('publish_retry_at', 0) > time.time() and cfg.get('publication', {}).get('enabled', False):
+        return
     if not SLUG.fullmatch(state['current']):
         raise factory.Invalid('Invalid current campaign name')
     factory.save(state_path, state)
@@ -343,6 +345,20 @@ def tick(root, invoke=None):
         factory.save(state_path, state)
         return
     with factory.lock(source):
+        if cfg.get('publication', {}).get('enabled', False):
+            import publishing
+            state.update(status='publishing')
+            factory.save(state_path, state)
+            try:
+                receipt = publishing.publish(source, cfg['publication'], root / 'publications' / (source.name + '.json'))
+            except publishing.PushPending as exc:
+                state.update(status='waiting_publish', publish_retry_at=time.time() + 1800, reason=str(exc))
+                factory.save(state_path, state)
+                return
+            state['publication'] = receipt
+            state.pop('publish_retry_at', None)
+            state.pop('reason', None)
+            factory.save(state_path, state)
         size = sum(p.stat().st_size for p in (source / 'cycles/01/snapshot').rglob('*') if p.is_file())
         if shutil.disk_usage(campaigns).free < size * 3 + cfg.get('min_free_bytes', 1073741824):
             raise factory.Blocked('Not enough free space to preserve inputs and create another revision')

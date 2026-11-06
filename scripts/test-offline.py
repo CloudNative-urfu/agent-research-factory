@@ -8,7 +8,7 @@ root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().pare
 tests = root / 'nix/_research'
 sys.path.insert(0, str(tests))
 suite = unittest.TestSuite()
-for pattern in ('test_factory.py', 'test_proxy.py', 'test_workflow_v2.py', 'test_experiment_runner.py', 'test_claude_config.py', 'test_limits.py', 'test_autopilot.py'):
+for pattern in ('test_factory.py', 'test_proxy.py', 'test_workflow_v2.py', 'test_experiment_runner.py', 'test_claude_config.py', 'test_limits.py', 'test_autopilot.py', 'test_publishing.py'):
     suite.addTests(unittest.defaultTestLoader.discover(str(tests), pattern=pattern))
 result = unittest.TextTestRunner(verbosity=1).run(suite)
 raise SystemExit(0 if result.wasSuccessful() else 1)
