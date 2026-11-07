@@ -11,6 +11,7 @@ from pathlib import Path
 
 import factory
 import deep_case
+import spec_workflow
 
 SLUG = re.compile(r'[a-zA-Z0-9][a-zA-Z0-9_-]*')
 
@@ -53,6 +54,9 @@ def validate_plan(work):
         deep_case.strings(required, 'task_ids')
         if not required or len(required) != len(set(required)) or set(required) - ids:
             raise factory.Invalid('Evaluation protocol needs known unique task IDs')
+    if (work / 'candidate/development.json').exists():
+        spec_workflow.validate_proposal(work, plan)
+        factory.safe_file(work, 'artifacts/coevolution-progress.md')
     return plan
 
 
@@ -87,6 +91,9 @@ def validate_review(work, plan):
         protocol = factory.object_json(factory.safe_file(work, 'candidate/proposal/evaluation-protocol.json'))
         if decision == 'proceed' and (not realism['acceptable'] or set(protocol['task_ids']) - set(ids)):
             raise factory.Invalid('Proceed requires realism approval and all protocol tasks')
+    if (work / 'candidate/development.json').exists() and decision == 'proceed':
+        if set(ids) != {t['id'] for t in plan['tasks']}:
+            raise factory.Invalid('OpenSpec proceed must approve the entire specified scope')
     return result
 
 
@@ -97,13 +104,13 @@ def source_info(source):
     cfg = factory.load(source / 'campaign.json')
     deep_case.check_config(cfg)
     case = factory.load(source / 'case/case.json')
-    deep_case.validate('critique', source / 'cycles/01/review', case)
+    deep_case.validate('critique', source / 'cycles/01/review', case, cfg.get('openspec_contract'))
     return {'source': str(source.resolve()),
             'manifest_sha256': digest(source / 'cycles/01/manifest.json'),
             'critique_sha256': digest(source / 'cycles/01/review/artifacts/critique.json')}
 
 
-def prepare_inputs(source, root):
+def prepare_inputs(source, root, development=None):
     identity = source_info(source)
     marker = root / 'source.json'
     if marker.exists():
@@ -126,7 +133,7 @@ def prepare_inputs(source, root):
     inputs.mkdir(parents=True, exist_ok=True)
     for relative in manifest:
         path = Path(relative)
-        if path.parts[0] in ('darp_range', 'tests', 'scripts', 'configs', 'corpus', 'case') or (len(path.parts) == 1 and path.suffix in ('.md', '.py', '.toml', '.txt')):
+        if path.parts[0] in ('darp_range', 'tests', 'scripts', 'configs', 'corpus', 'case', 'openspec') or (len(path.parts) == 1 and path.suffix in ('.md', '.py', '.toml', '.txt')):
             dest = inputs / 'prototype' / relative
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(snapshot / relative, dest)
@@ -140,6 +147,19 @@ def prepare_inputs(source, root):
         shutil.copy2(factory.safe_file(source, relative), inputs / name)
     factory.save(inputs / 'provenance.json', identity)
     shutil.copy2(Path(__file__).with_name('EVALUATION-METHOD.md'), inputs / 'evaluation-method.md')
+    if development:
+        if development != {'workflow': 'openspec', 'track': 'adversarial-coevolution'}:
+            raise factory.Invalid('Unsupported development workflow/track')
+        factory.save(inputs / 'development.json', development)
+        for name, dest in (('COEVOLUTION.md', 'coevolution.md'), ('OPENSPEC-WORKFLOW.md', 'openspec-workflow.md')):
+            shutil.copy2(Path(__file__).with_name(name), inputs / dest)
+        for origin, dest in (
+            ('cycles/01/snapshot/artifacts/coevolution-progress.md', 'previous-coevolution-progress.md'),
+            ('cycles/01/snapshot/artifacts/openspec-results.json', 'previous-openspec-results.json'),
+            ('cycles/01/review/artifacts/openspec-review.json', 'previous-openspec-review.json'),
+        ):
+            if (source / origin).exists():
+                shutil.copy2(factory.safe_file(source, origin), inputs / dest)
     factory.save(root / 'inputs-manifest.json', factory.inventory(inputs, cfg['max_snapshot_bytes']))
     factory.save(marker, identity)
 
@@ -157,8 +177,8 @@ def advance_review(root, state, decision):
     return result
 
 
-def assess(source, root, invoke=None):
-    prepare_inputs(source, root)
+def assess(source, root, invoke=None, development=None):
+    prepare_inputs(source, root, development)
     state_path = root / 'state.json'
     state = factory.load(state_path) if state_path.exists() else {
         'status': 'ready', 'stage': 'brainstorm', 'round': 0, 'attempt': 0}
@@ -211,6 +231,8 @@ def assess(source, root, invoke=None):
         prompt = Path(__file__).with_name(prompt_name).read_text()
         if (candidate / 'evaluation-method.md').exists():
             prompt += '\n\n' + (candidate / 'evaluation-method.md').read_text()
+        if (candidate / 'development.json').exists():
+            prompt += '\n\n' + (candidate / 'openspec-workflow.md').read_text()
         if state.get('last_failure'):
             prompt += '\nИсправь ошибку предыдущей сдачи: ' + state['last_failure']
         role = 'researcher' if stage == 'brainstorm' else 'critic'
@@ -287,6 +309,20 @@ def prepare_revision(source, target, assessment):
     factory.save(inputs / 'source.json', identity)
     plan = factory.load(round_dir / 'proposal/plan.json')
     tasks = [task for task in plan['tasks'] if task['id'] in decision['approved_task_ids']]
+    cfg.pop('openspec_contract', None)
+    if (assessment / 'inputs/development.json').exists():
+        proposal_work = round_dir / 'openspec-check'
+        proposal_work.mkdir(exist_ok=True)
+        factory.snapshot(round_dir / 'proposal', proposal_work / 'artifacts')
+        contract = spec_workflow.validate_proposal(proposal_work, plan)
+        if set(contract['tasks']) != set(decision['approved_task_ids']):
+            raise factory.Invalid('Approved tasks differ from OpenSpec scope')
+        relative = 'openspec/changes/' + contract['change']
+        if (baseline / relative).exists():
+            raise factory.Invalid('Refusing existing OpenSpec change name')
+        factory.snapshot(round_dir / 'proposal' / relative, work / relative)
+        cfg['openspec_contract'] = contract
+        factory.save(staging / 'openspec-contract.json', contract)
     brief = (
         f'# Доработка {target.name}: одобренные улучшения текущего решения\n\n'
         f'Прочитай целиком {input_name}/: brainstorm/plan в proposal, независимую review, '
@@ -315,6 +351,11 @@ def prepare_revision(source, target, assessment):
     if method.exists():
         shutil.copy2(method, inputs / 'evaluation-method.md')
         brief += '\n\n' + method.read_text()
+    if cfg.get('openspec_contract'):
+        for filename in ('coevolution.md', 'openspec-workflow.md'):
+            shutil.copy2(assessment / 'inputs' / filename, inputs / filename)
+            brief += '\n\n' + (inputs / filename).read_text()
+        brief += '\nТекущий утверждённый change: ' + cfg['openspec_contract']['change'] + '\n'
     for path in (staging / 'brief.md', work / 'brief.md'):
         path.write_text(brief)
     factory.save(staging / 'campaign.json', cfg)
@@ -393,7 +434,7 @@ def tick(root, invoke=None):
         assessment = root / 'assessments' / target.name
         state.update(status='assessing', assessment=str(assessment))
         factory.save(state_path, state)
-        result = assess(source, assessment, invoke)
+        result = assess(source, assessment, invoke, development=cfg.get('development'))
         if result['decision'] != 'proceed':
             state.update(status='paused', decision=result['decision'], reason=result['rationale'])
             factory.save(state_path, state)

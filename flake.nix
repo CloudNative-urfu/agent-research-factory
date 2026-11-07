@@ -51,6 +51,7 @@
                 pkgs.curl
                 pkgs.uv
                 pkgs.bun
+                pkgs.openspec
               ];
               text = ''
                 export PYTHONTZPATH=${pkgs.tzdata}/share/zoneinfo
@@ -125,6 +126,7 @@
               {
                 nativeBuildInputs = [
                   pkgs.python3
+                  pkgs.openspec
                 ];
               }
               ''
@@ -139,6 +141,7 @@
               environment.systemPackages = [
                 pkgs.python3
                 pkgs.bubblewrap
+                pkgs.openspec
               ];
               users.users.researcher.isNormalUser = true;
               system.stateVersion = "26.05";
@@ -166,6 +169,15 @@
               }
               ''
                 python3 ${./scripts/verify-source.py} ${self}
+                touch "$out"
+              '';
+          openspec =
+            pkgs.runCommand "research-openspec-validation" { nativeBuildInputs = [ pkgs.openspec ]; }
+              ''
+                export HOME="$TMPDIR"
+                export OPENSPEC_TELEMETRY=0
+                cd ${self}
+                openspec validate --all --strict --no-interactive
                 touch "$out"
               '';
         }

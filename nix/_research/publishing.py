@@ -34,7 +34,8 @@ def export(source, target, git_dir):
     if state.get('status') != 'completed' or state.get('steps', {}).get('critique', {}).get('status') != 'done':
         raise factory.Invalid('Publication requires a completed revision and critique')
     case = factory.load(source / 'case/case.json')
-    deep_case.validate('critique', source / 'cycles/01/review', case)
+    cfg = factory.load(source / 'campaign.json')
+    deep_case.validate('critique', source / 'cycles/01/review', case, cfg.get('openspec_contract'))
     snapshot = source / 'cycles/01/snapshot'
     manifest_path = source / 'cycles/01/manifest.json'
     manifest = factory.load(manifest_path)
@@ -58,7 +59,7 @@ def export(source, target, git_dir):
         staging.mkdir()
         files, omitted = {}, []
         extensions = {'.py', '.md', '.json', '.jsonl', '.csv', '.toml', '.txt', '.sh', '.nix', '.yaml', '.yml', '.sha256'}
-        roots = {'darp_range', 'tests', 'scripts', 'configs', 'corpus', 'case'}
+        roots = {'darp_range', 'tests', 'scripts', 'configs', 'corpus', 'case', 'openspec'}
 
         def copy(path, relative, expected=None):
             if path.is_symlink() or any(factory.protected(part) for part in path.relative_to(source).parts):
@@ -93,6 +94,10 @@ def export(source, target, git_dir):
         for name in ('critique.md', 'critique.json'):
             if not copy(factory.safe_file(source, 'cycles/01/review/artifacts/' + name), 'review/' + name):
                 raise factory.Invalid('Required critique exceeds text export limit')
+        if cfg.get('openspec_contract'):
+            for name in ('openspec-review.json', 'coevolution-progress.md'):
+                if not copy(factory.safe_file(source, 'cycles/01/review/artifacts/' + name), 'review/' + name):
+                    raise factory.Invalid('OpenSpec review exceeds text export limit')
         if not copy(manifest_path, 'source-manifest.json'):
             raise factory.Invalid('Source manifest exceeds text export limit')
         factory.check_snapshot(staging, files, 64 * 1024 * 1024)

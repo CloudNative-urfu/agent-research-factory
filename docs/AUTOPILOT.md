@@ -17,6 +17,46 @@ critique, проверяет хеши снимка и запускает две 
 
 ## Конфигурация
 
+### OpenSpec и программа эволюции
+
+Для DARP включается опциональный контракт:
+
+```json
+"development": {
+  "workflow": "openspec",
+  "track": "adversarial-coevolution"
+}
+```
+
+Новые assessment фиксируют `development.json`, `coevolution.md` и
+`openspec-workflow.md`. Брейншторм готовит change с proposal/design/delta specs/tasks,
+а контроллер запускает настоящий `openspec validate --strict --no-interactive`.
+OpenSpec входит в Nix-пакет и Home Manager launcher. Все task ID должны совпадать с
+plan.json и получить одобрение критика; согласование подмножества требует нового плана.
+
+Change копируется в `work/openspec/changes/<name>`. Хеши одобренного scope хранятся в
+campaign.json и отдельном openspec-contract.json контроллера. На report/critique
+изменение scope запрещено, кроме отметок checkbox. Автор сдаёт openspec-results.json,
+критик — openspec-review.json, каждый с полным списком задач и локальными evidence.
+Статусы implemented/partial/blocked: только implemented у автора соответствует `[x]`.
+Критик вправе не согласиться с автором. Частичность не маскируется успешным завершением
+прохода: следующая оценка получает оба результата и coevolution-progress.md.
+
+История openspec/ сохраняется в снимках, assessment inputs и Git-экспорте. Имена новых
+change не могут заменять предыдущие. Не архивируйте текущий change до независимой
+критики: его путь и документы входят в контракт. Старые assessment не переключаются
+на новый workflow при восстановлении; следующая новая оценка использует текущий конфиг.
+
+Программа COEVOLUTION.md задаёт зависимые этапы: OS-изоляция и контроль входов →
+раздельная постоянная память с provenance/режимами feedback → лига замороженных версий
+с архивными соперниками и закрытой оценкой. Это задания для следующих ревизий DARP,
+а не реализация этих механизмов фабрикой. Аудит должен охватывать подготовку атак,
+а не только промпт Qwen. Приватная память/логи оценщика не добавляются в Git-экспорт;
+раскрытые тесты перестают считаться скрытыми. Бюджеты моделей остаются прежними.
+
+Разработка самой фабрики также фиксируется в `openspec/`. Проверка:
+`openspec validate --all --strict --no-interactive` (или Nix check `openspec`).
+
 ### Реалистичность экспериментов
 
 Новые оценки фиксируют `EVALUATION-METHOD.md` в `inputs/evaluation-method.md` вместе

@@ -54,6 +54,18 @@ class AutopilotTests(unittest.TestCase):
                        'required_changes': [], 'pivot_evidence': ''}
 
     def assessor(self, role, stage, work, prompt, log):
+        if role == 'researcher' and (work / 'candidate/development.json').exists():
+            change = work / 'artifacts/openspec/changes/fix-confirm'
+            (change / 'specs/confirmation').mkdir(parents=True, exist_ok=True)
+            (change / 'proposal.md').write_text('## Why\nCorrect confirmation\n## What Changes\nValidate facts\n## Impact\nClient\n')
+            (change / 'design.md').write_text('Explicit fact contract')
+            (change / 'tasks.md').write_text('- [ ] confirm Validate complete proposal\n')
+            (change / 'specs/confirmation/spec.md').write_text(
+                '## ADDED Requirements\n\n### Requirement: Correct facts\n'
+                'The client SHALL reject contradictory facts.\n\n#### Scenario: Wrong account\n'
+                '- **WHEN** the account differs\n- **THEN** confirmation is refused\n')
+            factory.save(work / 'artifacts/openspec-plan.json', {'change': 'fix-confirm'})
+            (work / 'artifacts/coevolution-progress.md').write_text('Foundation incomplete; fix confirmation first')
         if (work / 'candidate/evaluation-method.md').exists():
             if role == 'researcher':
                 factory.save(work / 'artifacts/evaluation-protocol.json', {
@@ -93,6 +105,47 @@ class AutopilotTests(unittest.TestCase):
         (self.base / 'review/artifacts/critique.md').unlink()
         with self.assertRaises(factory.Invalid):
             autopilot.assess(self.source, self.root / 'assessment', self.assessor)
+
+    def test_openspec_is_frozen_and_handed_off(self):
+        assessment = self.root / 'assessment'
+        development = {'workflow': 'openspec', 'track': 'adversarial-coevolution'}
+        autopilot.assess(self.source, assessment, self.assessor, development=development)
+        dest = self.source.parent / 'darp-revision-5'
+        autopilot.prepare_revision(self.source, dest, assessment)
+        cfg = factory.load(dest / 'campaign.json')
+        self.assertEqual(cfg['openspec_contract']['tasks'], ['confirm'])
+        self.assertTrue((dest / 'cycles/01/work/openspec/changes/fix-confirm/tasks.md').exists())
+        autopilot.prepare_revision(self.source, dest, assessment)
+        self.assertIn('программа состязательной эволюции', (dest / 'brief.md').read_text())
+
+    def test_enabling_workflow_does_not_reinterpret_existing_assessment(self):
+        assessment = self.root / 'assessment'
+        autopilot.prepare_inputs(self.source, assessment)
+        autopilot.assess(self.source, assessment, self.assessor,
+                         development={'workflow': 'openspec', 'track': 'adversarial-coevolution'})
+        self.assertFalse((assessment / 'inputs/development.json').exists())
+
+    def test_openspec_history_reaches_next_assessment(self):
+        history = self.work / 'openspec/changes/old/tasks.md'
+        history.parent.mkdir(parents=True)
+        history.write_text('- [ ] old Residual requirement\n')
+        factory.save(self.base / 'manifest.json', factory.inventory(self.work))
+        assessment = self.root / 'assessment'
+        autopilot.prepare_inputs(self.source, assessment,
+                                {'workflow': 'openspec', 'track': 'adversarial-coevolution'})
+        self.assertEqual((assessment / 'inputs/prototype/openspec/changes/old/tasks.md').read_text(), history.read_text())
+
+    def test_openspec_change_collision_preserves_existing_work(self):
+        history = self.work / 'openspec/changes/fix-confirm/tasks.md'
+        history.parent.mkdir(parents=True)
+        history.write_text('- [ ] historical Keep original work\n')
+        factory.save(self.base / 'manifest.json', factory.inventory(self.work))
+        assessment = self.root / 'assessment'
+        autopilot.assess(self.source, assessment, self.assessor,
+                         development={'workflow': 'openspec', 'track': 'adversarial-coevolution'})
+        with self.assertRaisesRegex(factory.Invalid, 'existing OpenSpec'):
+            autopilot.prepare_revision(self.source, self.source.parent / 'darp-revision-5', assessment)
+        self.assertEqual(history.read_text(), '- [ ] historical Keep original work\n')
 
     def test_missing_protocol_blocks_new_gate(self):
         def invoke(*args):

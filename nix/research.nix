@@ -39,6 +39,7 @@
         python3
         bun
         nodejs
+        openspec
         gcc
         gnumake
         pkg-config

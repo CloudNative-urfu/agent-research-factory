@@ -225,7 +225,10 @@ def validate_requirements(rows, case, name):
             raise Invalid(f'{name}.{key}: status must be one of ' + ', '.join(STATUSES))
 
 
-def validate(step, work, case):
+def validate(step, work, case, openspec_contract=None):
+    if openspec_contract:
+        import spec_workflow
+        spec_workflow.validate_delivery(step, work, openspec_contract)
     if step == 'integrate':
         submission = factory.object_json(factory.safe_file(work, 'artifacts/submission.json'))
         argv(submission.get('verify_command'), 'verify_command')
@@ -475,7 +478,7 @@ def step(root, base, work, state, cfg, case, invoke, verify):
             if name == 'decompose':
                 state['components'] = validate_decomposition(work, case)
             elif name != 'fix':
-                validate(name, place, case)
+                validate(name, place, case, cfg.get('openspec_contract'))
         except (Invalid, ValueError, OSError) as exc:
             failure = {'kind': 'invalid', 'detail': str(exc)}
     if not failure and (name.startswith('build:') or name == 'integrate'):
