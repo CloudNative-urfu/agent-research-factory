@@ -394,12 +394,22 @@ def tick(root, invoke=None):
     state_path = root / 'state.json'
     state = factory.load(state_path) if state_path.exists() else {
         'current': cfg['initial'], 'next_number': cfg['next_number'], 'status': 'watching'}
-    if state['status'] == 'paused' or not cfg.get('enabled', True):
-        return
-    if state.get('publish_retry_at', 0) > time.time() and cfg.get('publication', {}).get('enabled', False):
+    if not cfg.get('enabled', True):
         return
     if not SLUG.fullmatch(state['current']):
         raise factory.Invalid('Invalid current campaign name')
+    if state['status'] == 'paused':
+        if (state.get('reason') != 'Source manifest exceeds text export limit'
+                or not cfg.get('publication', {}).get('enabled', False)):
+            return
+        recovery = root / 'history' / ('manifest-limit-recovery-' + state['current'] + '.json')
+        if not recovery.exists():
+            factory.save(recovery, {'time': time.time(), 'previous_state': state.copy()})
+        state.update(status='watching')
+        state.pop('reason', None)
+        factory.save(state_path, state)
+    if state.get('publish_retry_at', 0) > time.time() and cfg.get('publication', {}).get('enabled', False):
+        return
     factory.save(state_path, state)
     if service_active(state['current']):
         return

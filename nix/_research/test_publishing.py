@@ -86,6 +86,36 @@ class PublishingTests(unittest.TestCase):
             publishing.publish(self.source, self.cfg, self.receipt)
         self.assertEqual(sum('commit' in c for c in self.calls), 1)
 
+    def test_large_source_manifest_preserved_and_retry_reuses_export(self):
+        manifest = self.source / 'cycles/01/manifest.json'
+        large = self.snapshot / 'darp_range/large.txt'
+        large.write_bytes(b'a' * 2_000_001)
+        # Retain a valid inventory and make its JSON representation larger than the text limit.
+        factory.save(manifest, factory.inventory(self.snapshot))
+        original = manifest.read_bytes() + b' ' * 2_000_001
+        manifest.write_bytes(original)
+        target = self.repo / 'revisions/darp-revision-5'
+        digest = publishing.export(self.source, target, self.repo / '.git')
+        self.assertEqual((target / 'source-manifest.json').read_bytes(), original)
+        record = factory.load(target / 'export-manifest.json')
+        self.assertEqual(record['identity']['snapshot_sha256'], publishing.sha(manifest))
+        self.assertEqual(record['files']['source-manifest.json'], publishing.sha(manifest))
+        self.assertIn('darp_range/large.txt', record['omitted_from_git'])
+        self.assertFalse((target / 'prototype/darp_range/large.txt').exists())
+        self.assertEqual(publishing.export(self.source, target, self.repo / '.git'), digest)
+
+    def test_export_manifest_counts_towards_total_budget(self):
+        reference = self.root / 'reference'
+        publishing.export(self.source, reference, self.repo / '.git')
+        without_marker = sum(p.stat().st_size for p in reference.rglob('*')
+                             if p.is_file() and p.name != 'export-manifest.json')
+        target = self.repo / 'revisions/darp-revision-5'
+        with patch.object(publishing, 'MAX_EXPORT_BYTES', without_marker, create=True):
+            with patch.object(publishing, 'git', side_effect=self.git), self.assertRaises(factory.Invalid):
+                publishing.publish(self.source, self.cfg, self.receipt)
+        self.assertFalse(target.exists())
+        self.assertFalse(any('commit' in c for c in self.calls))
+
     def test_crash_after_commit_recovers_without_second_commit(self):
         self.committed = True
         with patch.object(publishing, 'git', side_effect=self.git):
@@ -124,6 +154,43 @@ class PublishingTests(unittest.TestCase):
              patch.object(publishing, 'git') as git:
             autopilot.tick(control)
         git.assert_not_called()
+
+    def test_legacy_manifest_pause_recovers_with_history(self):
+        import autopilot
+        from test_autopilot import AutopilotTests
+        fixture = AutopilotTests()
+        fixture.setUp()
+        self.addCleanup(fixture.temp.cleanup)
+        control = fixture.root / 'control'
+        factory.save(control / 'config.json', {'campaigns': str(fixture.source.parent), 'initial': fixture.source.name,
+                     'prefix': 'darp-revision-', 'next_number': 5, 'min_free_bytes': 0,
+                     'publication': self.cfg | {'enabled': True}})
+        old = {'current': fixture.source.name, 'next_number': 5, 'status': 'paused',
+               'reason': 'Source manifest exceeds text export limit'}
+        factory.save(control / 'state.json', old)
+        with patch.object(autopilot, 'service_active', return_value=False), \
+             patch.object(publishing, 'publish', return_value={'status': 'published'}) as publish, \
+             patch.object(autopilot, 'assess', return_value={'decision': 'stop', 'rationale': 'No next task'}):
+            autopilot.tick(control)
+        publish.assert_called_once()
+        record = factory.load(control / 'history' / ('manifest-limit-recovery-' + fixture.source.name + '.json'))
+        self.assertEqual(record['previous_state'], old)
+        self.assertEqual(factory.load(control / 'state.json')['reason'], 'No next task')
+
+    def test_other_pauses_and_disabled_publication_do_not_resume(self):
+        import autopilot
+        control = self.root / 'control'
+        for reason, enabled in (('Operator pause', True), ('Source manifest exceeds text export limit', False)):
+            with self.subTest(reason=reason, enabled=enabled):
+                factory.save(control / 'config.json', {'campaigns': str(self.source.parent), 'initial': self.source.name,
+                             'prefix': 'darp-revision-', 'next_number': 6,
+                             'publication': self.cfg | {'enabled': enabled}})
+                state = {'current': self.source.name, 'next_number': 6, 'status': 'paused', 'reason': reason}
+                factory.save(control / 'state.json', state)
+                with patch.object(publishing, 'publish') as publish:
+                    autopilot.tick(control)
+                publish.assert_not_called()
+                self.assertEqual(factory.load(control / 'state.json'), state)
 
     def test_push_failure_prevents_next_assessment_and_schedules_retry(self):
         import autopilot

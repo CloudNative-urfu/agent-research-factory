@@ -12,6 +12,9 @@ from pathlib import Path
 import factory
 import deep_case
 
+MAX_TEXT_BYTES = 2_000_000
+MAX_EXPORT_BYTES = 64 * 1024 * 1024
+
 
 class PushPending(RuntimeError):
     pass
@@ -52,7 +55,7 @@ def export(source, target, git_dir):
         record = factory.load(marker)
         if record.get('identity') != identity:
             raise factory.Invalid('Existing export belongs to different evidence')
-        factory.check_snapshot(target, record['files'] | {'export-manifest.json': sha(marker)})
+        factory.check_snapshot(target, record['files'] | {'export-manifest.json': sha(marker)}, MAX_EXPORT_BYTES)
         return sha(marker)
     with tempfile.TemporaryDirectory(prefix='research-export-', dir=git_dir) as tmp:
         staging = Path(tmp) / 'export'
@@ -61,10 +64,10 @@ def export(source, target, git_dir):
         extensions = {'.py', '.md', '.json', '.jsonl', '.csv', '.toml', '.txt', '.sh', '.nix', '.yaml', '.yml', '.sha256'}
         roots = {'darp_range', 'tests', 'scripts', 'configs', 'corpus', 'case', 'openspec'}
 
-        def copy(path, relative, expected=None):
+        def copy(path, relative, expected=None, limit=MAX_TEXT_BYTES):
             if path.is_symlink() or any(factory.protected(part) for part in path.relative_to(source).parts):
                 raise factory.Invalid('Secret-shaped file or symlink in publication input')
-            if path.stat().st_size > 2_000_000:
+            if path.stat().st_size > limit:
                 return False
             data = path.read_bytes()
             try:
@@ -98,12 +101,13 @@ def export(source, target, git_dir):
             for name in ('openspec-review.json', 'coevolution-progress.md'):
                 if not copy(factory.safe_file(source, 'cycles/01/review/artifacts/' + name), 'review/' + name):
                     raise factory.Invalid('OpenSpec review exceeds text export limit')
-        if not copy(manifest_path, 'source-manifest.json'):
-            raise factory.Invalid('Source manifest exceeds text export limit')
-        factory.check_snapshot(staging, files, 64 * 1024 * 1024)
+        if not copy(manifest_path, 'source-manifest.json', identity['snapshot_sha256'], limit=MAX_EXPORT_BYTES):
+            raise factory.Invalid('Source manifest exceeds total export budget or is not text')
         factory.save(staging / 'export-manifest.json', {'identity': identity, 'files': files,
                      'omitted_from_git': omitted,
-                     'retention': 'Complete snapshots, raw runs and logs remain in the original campaign.'})
+                      'retention': 'Complete snapshots, raw runs and logs remain in the original campaign.'})
+        factory.check_snapshot(staging, files | {'export-manifest.json': sha(staging / 'export-manifest.json')},
+                               MAX_EXPORT_BYTES)
         target.parent.mkdir(parents=True, exist_ok=True)
         os.rename(staging, target)
     return sha(marker)
