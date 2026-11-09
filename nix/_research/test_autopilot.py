@@ -116,7 +116,7 @@ class AutopilotTests(unittest.TestCase):
         self.assertEqual(cfg['openspec_contract']['tasks'], ['confirm'])
         self.assertTrue((dest / 'cycles/01/work/openspec/changes/fix-confirm/tasks.md').exists())
         autopilot.prepare_revision(self.source, dest, assessment)
-        self.assertIn('программа состязательной эволюции', (dest / 'brief.md').read_text())
+        self.assertIn((assessment / 'inputs/coevolution.md').read_text(), (dest / 'brief.md').read_text())
 
     def test_enabling_workflow_does_not_reinterpret_existing_assessment(self):
         assessment = self.root / 'assessment'
