@@ -598,12 +598,15 @@ def restore_limit(root, state, cfg):
 
 
 def preflight_ready(root, state, preflight):
+    import preflight as availability
     while True:
         limits.wait(root, state, save)
         if preflight is None:
             return
+        availability.wait(root, state, save)
         report = preflight()
         if report['ok']:
+            availability.recovered(root, state, save)
             return
         checks = report.get('checks', {})
         failed = [key for key, value in checks.items() if not key.endswith('_error') and value is not True]
@@ -612,6 +615,9 @@ def preflight_ready(root, state, preflight):
             errors = [checks[key.replace('_tool_call', '_error')] for key in failed]
             error = max(errors, key=lambda item: limits.deadline(item, time.time()))
             limits.schedule(root, state, error, save)
+            continue
+        if availability.retryable(report):
+            availability.schedule(root, state, report, save)
             continue
         state.update(status='blocked', error='Live preflight failed; see doctor.json')
         save(root / 'state.json', state)
@@ -931,7 +937,7 @@ def main():
             print(json.dumps({'archive': str(archive), 'status': 'ready'}, ensure_ascii=False))
         elif args.command == 'status':
             state = load(root / 'state.json')
-            print(json.dumps({k: state.get(k) for k in ('status', 'cycle', 'stage', 'winner', 'error', 'last_failure', 'rate_limit')}, ensure_ascii=False, indent=2))
+            print(json.dumps({k: state.get(k) for k in ('status', 'cycle', 'stage', 'winner', 'error', 'last_failure', 'rate_limit', 'preflight_retry')}, ensure_ascii=False, indent=2))
         elif args.command == 'autopilot':
             import autopilot
             autopilot.run(root)

@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 import os
+import socket
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -137,7 +138,7 @@ def check_api(base):
                                              headers={'Content-Type': 'application/json'})
             with urllib.request.urlopen(request, timeout=180) as response:
                 if name == 'stream':
-                    done, content, error = False, '', False
+                    done, content, error, finish_reason = False, '', False, None
                     for line in response:
                         if not line.startswith(b'data:'):
                             continue
@@ -150,10 +151,17 @@ def check_api(base):
                         if chunk.get('error'):
                             errors[name] = error_details(chunk, response.status)
                         for choice in chunk.get('choices', []):
+                            reason = choice.get('finish_reason')
+                            if reason:
+                                finish_reason = reason
+                            error |= reason in ('error', 'length')
                             content += choice.get('delta', {}).get('content') or ''
                     checks[name] = done and bool(content.strip()) and not error
                     if not checks[name] and name not in errors:
-                        errors[name] = {'message': 'Stream incomplete or final content empty'}
+                        errors[name] = {'message': ('Stream generation failed or truncated' if error else
+                                                   'Stream incomplete or final content empty')}
+                    if not checks[name]:
+                        errors[name].update(done=done, content_chars=len(content), finish_reason=finish_reason)
                     continue
                 data = json.load(response)
             if not isinstance(data, dict):
@@ -190,6 +198,9 @@ def check_api(base):
         except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError) as exc:
             checks[name] = False
             errors[name] = {'message': 'Connection or response validation failed', 'type': type(exc).__name__}
+            reason = getattr(exc, 'reason', None)
+            if isinstance(reason, (TimeoutError, ConnectionResetError, ConnectionRefusedError)) or getattr(reason, 'errno', None) == socket.EAI_AGAIN:
+                errors[name]['type'] = type(reason).__name__
     return {'ok': all(checks.values()), 'checks': checks, 'errors': errors}
 
 

@@ -12,6 +12,7 @@ from pathlib import Path
 import factory
 import deep_case
 import spec_workflow
+import preflight
 
 SLUG = re.compile(r'[a-zA-Z0-9][a-zA-Z0-9_-]*')
 
@@ -386,6 +387,14 @@ def start_service(name):
     subprocess.run(['systemctl', '--user', 'start', f'research-campaign@{name}.service'], check=True)
 
 
+def transient_preflight_block(source):
+    state = factory.load(source / 'state.json')
+    doctor = source / 'doctor.json'
+    return (state.get('status') == 'blocked'
+            and state.get('error') == 'Live preflight failed; see doctor.json'
+            and doctor.exists() and preflight.retryable(factory.load(doctor)))
+
+
 def tick(root, invoke=None):
     cfg = factory.load(root / 'config.json')
     campaigns = Path(cfg['campaigns']).resolve()
@@ -399,10 +408,14 @@ def tick(root, invoke=None):
     if not SLUG.fullmatch(state['current']):
         raise factory.Invalid('Invalid current campaign name')
     if state['status'] == 'paused':
-        if (state.get('reason') != 'Source manifest exceeds text export limit'
-                or not cfg.get('publication', {}).get('enabled', False)):
+        legacy_manifest = (state.get('reason') == 'Source manifest exceeds text export limit'
+                           and cfg.get('publication', {}).get('enabled', False))
+        legacy_preflight = (state.get('reason') == 'Current campaign blocked; inspect its state.json'
+                            and transient_preflight_block(campaigns / state['current']))
+        if not legacy_manifest and not legacy_preflight:
             return
-        recovery = root / 'history' / ('manifest-limit-recovery-' + state['current'] + '.json')
+        prefix = 'manifest-limit-recovery-' if legacy_manifest else 'preflight-recovery-'
+        recovery = root / 'history' / (prefix + state['current'] + '.json')
         if not recovery.exists():
             factory.save(recovery, {'time': time.time(), 'previous_state': state.copy()})
         state.update(status='watching')
@@ -415,7 +428,8 @@ def tick(root, invoke=None):
         return
     source = campaigns / state['current']
     current = factory.load(source / 'state.json')
-    if current['status'] in ('ready', 'running', 'waiting_limit', 'retrying'):
+    if (current['status'] in ('ready', 'running', 'waiting_limit', 'waiting_preflight', 'retrying')
+            or transient_preflight_block(source)):
         start_service(source.name)
         return
     if current['status'] != 'completed':

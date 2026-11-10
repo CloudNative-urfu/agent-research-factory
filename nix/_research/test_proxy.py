@@ -106,6 +106,20 @@ class ProxyTests(unittest.TestCase):
         self.assertNotIn('reasoning', self.up.body)
         self.assertGreaterEqual(self.up.body['max_tokens'], 1024)
 
+    def test_stream_finish_error_is_not_success(self):
+        self.up.payload = b'data: {"choices":[{"delta":{"content":"OK"},"finish_reason":"error"}]}\n\ndata: [DONE]\n\n'
+        report = check_api(f'http://127.0.0.1:{self.proxy.server_port}/v1')
+        self.assertFalse(report['checks']['stream'])
+        self.assertEqual(report['errors']['stream']['finish_reason'], 'error')
+
+    def test_stream_length_is_diagnosed_not_silently_accepted(self):
+        self.up.payload = b'data: {"choices":[{"delta":{"reasoning":"thinking"},"finish_reason":"length"}]}\n\ndata: [DONE]\n\n'
+        report = check_api(f'http://127.0.0.1:{self.proxy.server_port}/v1')
+        self.assertFalse(report['checks']['stream'])
+        self.assertTrue(report['errors']['stream']['done'])
+        self.assertEqual(report['errors']['stream']['finish_reason'], 'length')
+        self.assertEqual(report['errors']['stream']['content_chars'], 0)
+
     def test_preflight_reports_missing_tool_call(self):
         self.up.payload = b'{"choices":[{"finish_reason":"stop","message":{"content":"{\\"ok\\":true}"}}]}'
         report = check_api(f'http://127.0.0.1:{self.proxy.server_port}/v1')

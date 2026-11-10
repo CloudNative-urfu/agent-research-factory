@@ -12,17 +12,17 @@
     "reason": "Регрессия передачи ожидания лимита"
   },
   "nix/_research/llm_proxy.py": {
-    "sha256": "bbd19453622b0d199634a70289956bcac217121146d74bb87b93c4c2c2dbde38",
-    "reason": "Однозначный tools-промпт preflight; явная диагностика отсутствующих и лишних вызовов"
+    "sha256": "6e2de731e47de6fb383b2260ab7feeeabb942d4ba3ecb53ff52a668383488910",
+    "reason": "Однозначная tools-проба; диагностика SSE finish_reason, полноты потока и сетевых ошибок"
   },
   "nix/_research/test_proxy.py": {
-    "sha256": "ffbe25a4e0ca7b25f3e8b784be3f92a6a5ebf64971e74afc17948ace1a9e7a6e",
-    "reason": "Регрессии отсутствующего tool_calls и нескольких вызовов в preflight"
+    "sha256": "814ac236f743c52cfbef0eca0de9683a3fc8c72c969e01cd2c4dbe5931709251",
+    "reason": "Регрессии tool_calls и диагностики ошибочного/обрезанного SSE"
   },
   "nix/_research/factory.py": {
-    "sha256": "2b122b0cdbea90d0a988e178f99988742aec6d43dd5724c34e2a26c9781813ed",
+    "sha256": "a6737a6f844124960487c38b183cba33a1cbfe7fa319a293381b28f60e317d53",
     "issue": "https://github.com/CloudNative-urfu/agent-research-factory/issues/5",
-    "reason": "deep_case, Claude, ожидание лимитов; команда autopilot для оценки улучшений перед следующей ревизией"
+    "reason": "deep_case, Claude, лимиты, autopilot; устойчивое ожидание временных ошибок preflight"
   },
   "nix/_research/AGENTS.md": {
     "sha256": "9463894b07ade75f19335f8f140fd88d1ea85938b83ce70014c7d78dd35f5007",
