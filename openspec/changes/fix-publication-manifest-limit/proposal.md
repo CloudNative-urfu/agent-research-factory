@@ -1,6 +1,6 @@
 ## Why
 
-DARP revision 8 completed but publication paused: its 3,077,288-byte source manifest
+DVARP revision 8 completed but publication paused: its 3,077,288-byte source manifest
 exceeded the ordinary 2 MB text-file limit. The selected prototype is only about 5.5 MB;
 the manifest is required provenance and belongs under the aggregate 64 MiB export budget.
 

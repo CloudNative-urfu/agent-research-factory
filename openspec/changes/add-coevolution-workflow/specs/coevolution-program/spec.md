@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-### Requirement: Staged program for DARP
+### Requirement: Staged program for DVARP
 The factory SHALL deliver a versioned roadmap covering OS isolation, attacker-visible
 information, experience provenance, separate feedback regimes and archived opponents.
 The researcher SHALL select bounded tasks and the critic SHALL assess their dependencies.

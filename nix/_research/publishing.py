@@ -62,7 +62,7 @@ def export(source, target, git_dir):
         staging.mkdir()
         files, omitted = {}, []
         extensions = {'.py', '.md', '.json', '.jsonl', '.csv', '.toml', '.txt', '.sh', '.nix', '.yaml', '.yml', '.sha256'}
-        roots = {'darp_range', 'tests', 'scripts', 'configs', 'corpus', 'case', 'openspec'}
+        roots = {'dvarp_range', 'tests', 'scripts', 'configs', 'corpus', 'case', 'openspec'}
 
         def copy(path, relative, expected=None, limit=MAX_TEXT_BYTES):
             if path.is_symlink() or any(factory.protected(part) for part in path.relative_to(source).parts):

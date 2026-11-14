@@ -13,7 +13,7 @@ class PublishingTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.source = self.root / 'darp-revision-5'
+        self.source = self.root / 'dvarp-revision-5'
         self.repo = self.root / 'repo'
         (self.repo / '.git').mkdir(parents=True)
         self.snapshot = self.source / 'cycles/01/snapshot'
@@ -22,8 +22,8 @@ class PublishingTests(unittest.TestCase):
         factory.save(self.source / 'campaign.json', {'max_snapshot_bytes': 1000000})
         factory.save(self.source / 'cycles/01/verification.json', {'ok': True})
         (self.source / 'FINAL.md').write_text('Completed')
-        (self.snapshot / 'darp_range').mkdir(parents=True)
-        (self.snapshot / 'darp_range/main.py').write_text('print("prototype")')
+        (self.snapshot / 'dvarp_range').mkdir(parents=True)
+        (self.snapshot / 'dvarp_range/main.py').write_text('print("prototype")')
         (self.snapshot / 'runs').mkdir()
         (self.snapshot / 'runs/raw.log').write_text('kept locally')
         (self.snapshot / 'artifacts').mkdir()
@@ -56,7 +56,7 @@ class PublishingTests(unittest.TestCase):
         if args[:1] == ('log',):
             return 'a' * 40 if self.committed else ''
         if args[:1] == ('show',):
-            return (self.repo / 'revisions/darp-revision-5/export-manifest.json').read_text()
+            return (self.repo / 'revisions/dvarp-revision-5/export-manifest.json').read_text()
         if 'commit' in args:
             self.committed = True
         if args == ('rev-parse', 'HEAD'):
@@ -88,20 +88,20 @@ class PublishingTests(unittest.TestCase):
 
     def test_large_source_manifest_preserved_and_retry_reuses_export(self):
         manifest = self.source / 'cycles/01/manifest.json'
-        large = self.snapshot / 'darp_range/large.txt'
+        large = self.snapshot / 'dvarp_range/large.txt'
         large.write_bytes(b'a' * 2_000_001)
         # Retain a valid inventory and make its JSON representation larger than the text limit.
         factory.save(manifest, factory.inventory(self.snapshot))
         original = manifest.read_bytes() + b' ' * 2_000_001
         manifest.write_bytes(original)
-        target = self.repo / 'revisions/darp-revision-5'
+        target = self.repo / 'revisions/dvarp-revision-5'
         digest = publishing.export(self.source, target, self.repo / '.git')
         self.assertEqual((target / 'source-manifest.json').read_bytes(), original)
         record = factory.load(target / 'export-manifest.json')
         self.assertEqual(record['identity']['snapshot_sha256'], publishing.sha(manifest))
         self.assertEqual(record['files']['source-manifest.json'], publishing.sha(manifest))
-        self.assertIn('darp_range/large.txt', record['omitted_from_git'])
-        self.assertFalse((target / 'prototype/darp_range/large.txt').exists())
+        self.assertIn('dvarp_range/large.txt', record['omitted_from_git'])
+        self.assertFalse((target / 'prototype/dvarp_range/large.txt').exists())
         self.assertEqual(publishing.export(self.source, target, self.repo / '.git'), digest)
 
     def test_export_manifest_counts_towards_total_budget(self):
@@ -109,7 +109,7 @@ class PublishingTests(unittest.TestCase):
         publishing.export(self.source, reference, self.repo / '.git')
         without_marker = sum(p.stat().st_size for p in reference.rglob('*')
                              if p.is_file() and p.name != 'export-manifest.json')
-        target = self.repo / 'revisions/darp-revision-5'
+        target = self.repo / 'revisions/dvarp-revision-5'
         with patch.object(publishing, 'MAX_EXPORT_BYTES', without_marker, create=True):
             with patch.object(publishing, 'git', side_effect=self.git), self.assertRaises(factory.Invalid):
                 publishing.publish(self.source, self.cfg, self.receipt)
@@ -132,7 +132,7 @@ class PublishingTests(unittest.TestCase):
         self.assertFalse(any('commit' in c for c in self.calls))
 
     def test_existing_export_must_match_not_be_overwritten(self):
-        target = self.repo / 'revisions/darp-revision-5'
+        target = self.repo / 'revisions/dvarp-revision-5'
         target.mkdir(parents=True)
         (target / 'user-work.txt').write_text('keep')
         with patch.object(publishing, 'git', side_effect=self.git), self.assertRaises(factory.Invalid):
@@ -147,7 +147,7 @@ class PublishingTests(unittest.TestCase):
         self.addCleanup(fixture.temp.cleanup)
         control = fixture.root / 'control'
         factory.save(control / 'config.json', {'campaigns': str(fixture.source.parent), 'initial': fixture.source.name,
-                     'prefix': 'darp-revision-', 'next_number': 5, 'min_free_bytes': 0,
+                     'prefix': 'dvarp-revision-', 'next_number': 5, 'min_free_bytes': 0,
                      'publication': {'enabled': False}})
         with patch.object(autopilot, 'service_active', return_value=False), \
              patch.object(autopilot, 'assess', return_value={'decision': 'stop', 'rationale': 'No changes'}), \
@@ -163,7 +163,7 @@ class PublishingTests(unittest.TestCase):
         self.addCleanup(fixture.temp.cleanup)
         control = fixture.root / 'control'
         factory.save(control / 'config.json', {'campaigns': str(fixture.source.parent), 'initial': fixture.source.name,
-                     'prefix': 'darp-revision-', 'next_number': 5, 'min_free_bytes': 0,
+                     'prefix': 'dvarp-revision-', 'next_number': 5, 'min_free_bytes': 0,
                      'publication': self.cfg | {'enabled': True}})
         old = {'current': fixture.source.name, 'next_number': 5, 'status': 'paused',
                'reason': 'Source manifest exceeds text export limit'}
@@ -183,7 +183,7 @@ class PublishingTests(unittest.TestCase):
         for reason, enabled in (('Operator pause', True), ('Source manifest exceeds text export limit', False)):
             with self.subTest(reason=reason, enabled=enabled):
                 factory.save(control / 'config.json', {'campaigns': str(self.source.parent), 'initial': self.source.name,
-                             'prefix': 'darp-revision-', 'next_number': 6,
+                             'prefix': 'dvarp-revision-', 'next_number': 6,
                              'publication': self.cfg | {'enabled': enabled}})
                 state = {'current': self.source.name, 'next_number': 6, 'status': 'paused', 'reason': reason}
                 factory.save(control / 'state.json', state)
@@ -200,7 +200,7 @@ class PublishingTests(unittest.TestCase):
         self.addCleanup(fixture.temp.cleanup)
         control = fixture.root / 'control'
         factory.save(control / 'config.json', {'campaigns': str(fixture.source.parent), 'initial': fixture.source.name,
-                     'prefix': 'darp-revision-', 'next_number': 5, 'min_free_bytes': 0,
+                     'prefix': 'dvarp-revision-', 'next_number': 5, 'min_free_bytes': 0,
                      'publication': self.cfg | {'enabled': True}})
         with patch.object(autopilot, 'service_active', return_value=False), \
              patch.object(publishing, 'publish', side_effect=publishing.PushPending('push failed')), \

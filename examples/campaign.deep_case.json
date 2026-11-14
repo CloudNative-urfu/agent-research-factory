@@ -15,7 +15,7 @@
     "context": 262144
   },
   "case": {
-    "repository": "https://github.com/CloudNative-urfu/darp.git",
+    "repository": "https://github.com/CloudNative-urfu/dvarp.git",
     "ref": "research",
     "documents": [
       "docs/guardrails-as-a-vector-of-attack.md",

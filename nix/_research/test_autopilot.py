@@ -12,7 +12,7 @@ class AutopilotTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.source = self.root / 'campaigns/darp-revision-4'
+        self.source = self.root / 'campaigns/dvarp-revision-4'
         self.base = self.source / 'cycles/01'
         self.work = self.base / 'snapshot'
         self.work.mkdir(parents=True)
@@ -110,7 +110,7 @@ class AutopilotTests(unittest.TestCase):
         assessment = self.root / 'assessment'
         development = {'workflow': 'openspec', 'track': 'adversarial-coevolution'}
         autopilot.assess(self.source, assessment, self.assessor, development=development)
-        dest = self.source.parent / 'darp-revision-5'
+        dest = self.source.parent / 'dvarp-revision-5'
         autopilot.prepare_revision(self.source, dest, assessment)
         cfg = factory.load(dest / 'campaign.json')
         self.assertEqual(cfg['openspec_contract']['tasks'], ['confirm'])
@@ -144,7 +144,7 @@ class AutopilotTests(unittest.TestCase):
         autopilot.assess(self.source, assessment, self.assessor,
                          development={'workflow': 'openspec', 'track': 'adversarial-coevolution'})
         with self.assertRaisesRegex(factory.Invalid, 'existing OpenSpec'):
-            autopilot.prepare_revision(self.source, self.source.parent / 'darp-revision-5', assessment)
+            autopilot.prepare_revision(self.source, self.source.parent / 'dvarp-revision-5', assessment)
         self.assertEqual(history.read_text(), '- [ ] historical Keep original work\n')
 
     def test_missing_protocol_blocks_new_gate(self):
@@ -170,7 +170,7 @@ class AutopilotTests(unittest.TestCase):
         assessment = self.root / 'assessment'
         autopilot.assess(self.source, assessment, self.assessor)
         method = (assessment / 'inputs/evaluation-method.md').read_text()
-        dest = self.source.parent / 'darp-revision-5'
+        dest = self.source.parent / 'dvarp-revision-5'
         autopilot.prepare_revision(self.source, dest, assessment)
         self.assertIn(method, (dest / 'brief.md').read_text())
         self.assertIn('evaluation-protocol.json', (dest / 'brief.md').read_text())
@@ -195,7 +195,7 @@ class AutopilotTests(unittest.TestCase):
     def test_insufficient_disk_space_prevents_new_work(self):
         control = self.root / 'control'
         factory.save(control / 'config.json', {'campaigns': str(self.source.parent), 'initial': self.source.name,
-                     'prefix': 'darp-revision-', 'next_number': 5})
+                     'prefix': 'dvarp-revision-', 'next_number': 5})
         with patch.object(autopilot, 'service_active', return_value=False), \
              patch.object(autopilot.shutil, 'disk_usage', return_value=Mock(free=0)):
             with self.assertRaisesRegex(factory.Blocked, 'free space'):
@@ -219,10 +219,10 @@ class AutopilotTests(unittest.TestCase):
         self.review['approved_task_ids'] = []
         control = self.root / 'control'
         factory.save(control / 'config.json', {'campaigns': str(self.source.parent), 'initial': self.source.name,
-                     'prefix': 'darp-revision-', 'next_number': 5, 'min_free_bytes': 0})
+                     'prefix': 'dvarp-revision-', 'next_number': 5, 'min_free_bytes': 0})
         with patch.object(autopilot, 'service_active', return_value=False), patch.object(autopilot, 'start_service') as start:
             autopilot.tick(control, self.assessor)
-        self.assertFalse((self.source.parent / 'darp-revision-5').exists())
+        self.assertFalse((self.source.parent / 'dvarp-revision-5').exists())
         start.assert_not_called()
         self.assertEqual(factory.load(control / 'state.json')['status'], 'paused')
 
@@ -230,7 +230,7 @@ class AutopilotTests(unittest.TestCase):
         assessment = self.root / 'assessment'
         autopilot.assess(self.source, assessment, self.assessor)
         original = factory.inventory(self.work)
-        dest = self.source.parent / 'darp-revision-5'
+        dest = self.source.parent / 'dvarp-revision-5'
         autopilot.prepare_revision(self.source, dest, assessment)
         self.assertEqual(factory.inventory(self.work), original)
         self.assertEqual((dest / 'cycles/01/work/main.py').read_text(), 'print("prototype")')
@@ -242,7 +242,7 @@ class AutopilotTests(unittest.TestCase):
     def test_refuses_unrelated_existing_destination(self):
         assessment = self.root / 'assessment'
         autopilot.assess(self.source, assessment, self.assessor)
-        dest = self.source.parent / 'darp-revision-5'
+        dest = self.source.parent / 'dvarp-revision-5'
         dest.mkdir()
         (dest / 'user-work.txt').write_text('keep me')
         with self.assertRaises(factory.Invalid):
@@ -252,7 +252,7 @@ class AutopilotTests(unittest.TestCase):
     def test_partial_work_copy_resumes_atomically(self):
         assessment = self.root / 'assessment'
         autopilot.assess(self.source, assessment, self.assessor)
-        dest = self.source.parent / 'darp-revision-5'
+        dest = self.source.parent / 'dvarp-revision-5'
         original = factory.snapshot
         def interrupted(source, target, *args):
             if target.name == 'work':
@@ -285,7 +285,7 @@ class AutopilotTests(unittest.TestCase):
     def test_active_campaign_is_not_interrupted(self):
         control = self.root / 'control'
         factory.save(control / 'config.json', {'campaigns': str(self.source.parent), 'initial': self.source.name,
-                     'prefix': 'darp-revision-', 'next_number': 5, 'min_free_bytes': 0})
+                     'prefix': 'dvarp-revision-', 'next_number': 5, 'min_free_bytes': 0})
         with patch.object(autopilot, 'service_active', return_value=True), patch.object(autopilot, 'start_service') as start:
             autopilot.tick(control, self.assessor)
         start.assert_not_called()
@@ -294,12 +294,12 @@ class AutopilotTests(unittest.TestCase):
     def test_crash_after_publication_does_not_duplicate_revision(self):
         control = self.root / 'control'
         factory.save(control / 'config.json', {'campaigns': str(self.source.parent), 'initial': self.source.name,
-                     'prefix': 'darp-revision-', 'next_number': 5, 'min_free_bytes': 0})
+                     'prefix': 'dvarp-revision-', 'next_number': 5, 'min_free_bytes': 0})
         with patch.object(autopilot, 'service_active', return_value=False), \
              patch.object(autopilot, 'start_service', side_effect=OSError('simulated systemd failure')):
             with self.assertRaises(OSError):
                 autopilot.tick(control, self.assessor)
         with patch.object(autopilot, 'service_active', return_value=False), patch.object(autopilot, 'start_service') as start:
             autopilot.tick(control, self.assessor)
-        start.assert_called_once_with('darp-revision-5')
-        self.assertFalse((self.source.parent / 'darp-revision-6').exists())
+        start.assert_called_once_with('dvarp-revision-5')
+        self.assertFalse((self.source.parent / 'dvarp-revision-6').exists())

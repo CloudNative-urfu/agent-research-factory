@@ -66,10 +66,10 @@ class PreflightTests(unittest.TestCase):
         import autopilot
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            source = root / 'campaigns/darp-revision-11'
+            source = root / 'campaigns/dvarp-revision-11'
             control = root / 'control'
             factory.save(control / 'config.json', {'campaigns': str(source.parent),
-                         'initial': source.name, 'prefix': 'darp-revision-', 'next_number': 12})
+                         'initial': source.name, 'prefix': 'dvarp-revision-', 'next_number': 12})
             old = {'current': source.name, 'next_number': 12, 'status': 'paused',
                    'reason': 'Current campaign blocked; inspect its state.json'}
             factory.save(source / 'state.json', {'status': 'blocked', 'stage': 'report',
@@ -82,5 +82,5 @@ class PreflightTests(unittest.TestCase):
                      patch.object(autopilot, 'start_service') as start:
                     autopilot.tick(control)
                 self.assertEqual(start.called, restart)
-            record = factory.load(control / 'history/preflight-recovery-darp-revision-11.json')
+            record = factory.load(control / 'history/preflight-recovery-dvarp-revision-11.json')
             self.assertEqual(record['previous_state'], old)
