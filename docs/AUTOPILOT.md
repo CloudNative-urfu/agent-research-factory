@@ -40,7 +40,7 @@ SSE-диагностика включает `done`, `content_chars`, `finish_rea
 
 ### OpenSpec и программа эволюции
 
-Для DARP включается опциональный контракт:
+Для DVARP включается опциональный контракт:
 
 ```json
 "development": {
@@ -70,7 +70,7 @@ change не могут заменять предыдущие. Не архиви�
 
 Программа COEVOLUTION.md задаёт зависимые этапы: OS-изоляция и контроль входов →
 раздельная постоянная память с provenance/режимами feedback → лига замороженных версий
-с архивными соперниками и закрытой оценкой. Это задания для следующих ревизий DARP,
+с архивными соперниками и закрытой оценкой. Это задания для следующих ревизий DVARP,
 а не реализация этих механизмов фабрикой. Аудит должен охватывать подготовку атак,
 а не только промпт Qwen. Приватная память/логи оценщика не добавляются в Git-экспорт;
 раскрытые тесты перестают считаться скрытыми. Бюджеты моделей остаются прежними.
@@ -95,7 +95,7 @@ change не могут заменять предыдущие. Не архиви�
 Новые оценки фиксируют `EVALUATION-METHOD.md` в `inputs/evaluation-method.md` вместе
 с манифестом. Методика передаётся обеим ролям и в brief следующей ревизии: сначала
 серверные бизнес-инварианты и легальные сценарии (`foundation`), затем независимая
-оценка дополнительной защиты (`evaluation`). Для DARP целевой процесс — возвраты.
+оценка дополнительной защиты (`evaluation`). Для DVARP целевой процесс — возвраты.
 Требуются паспорта атак, независимый oracle, легальные пары, фиксация версии,
 скрытые тесты критика и симметричное распределение бюджета между конфигурациями.
 
@@ -110,32 +110,32 @@ change не могут заменять предыдущие. Не архиви�
 Отдельный третий агент не запускается: независимые сценарии готовит финальный критик
 после фиксации авторского снимка, в пределах существующего резерва бюджета.
 
-`~/.local/share/research-autopilot/darp/config.json`:
+`~/.local/share/research-autopilot/dvarp/config.json`:
 
 ```json
 {
   "campaigns": "/home/geekiot/.local/share/research-campaigns",
-  "initial": "darp-revision-4",
-  "prefix": "darp-revision-",
+  "initial": "dvarp-revision-4",
+  "prefix": "dvarp-revision-",
   "next_number": 5,
   "enabled": true,
   "min_free_bytes": 1073741824
 }
 ```
 
-Команда: `research-factory autopilot ~/.local/share/research-autopilot/darp`.
+Команда: `research-factory autopilot ~/.local/share/research-autopilot/dvarp`.
 Home Manager экспортирует шаблон `research-autopilot@.service` без `Install.WantedBy`.
 Запуск конкретного экземпляра задаётся в конфигурации хоста:
 
 ```nix
 home-manager.users.geekiot.systemd.user.targets.default.Unit.Wants = [
-  "research-autopilot@darp.service"
+  "research-autopilot@dvarp.service"
 ];
 ```
 
 Не включайте сам шаблон через `Install.WantedBy`: Home Manager может попытаться
 запустить его без имени экземпляра. После активации экземпляр можно запустить вручную
-через `systemctl --user start research-autopilot@darp.service`.
+через `systemctl --user start research-autopilot@dvarp.service`.
 Для работы до входа пользователя нужен ранее настроенный linger.
 
 `state.json` автопилота хранит текущую кампанию, следующий номер, состояние и причину
@@ -156,7 +156,7 @@ home-manager.users.geekiot.systemd.user.targets.default.Unit.Wants = [
   бюджет фиксируется в brief; это инструкция агентам, а не новый сетевой ограничитель.
 - Публикация в Git опциональна и по умолчанию выключена; см. ниже.
 
-Остановка автопилота: `systemctl --user stop research-autopilot@darp.service`.
+Остановка автопилота: `systemctl --user stop research-autopilot@dvarp.service`.
 Уже запущенная доработка продолжит работу; для остановки самой кампании остановите
 её `research-campaign@<имя>.service` отдельно.
 
@@ -172,9 +172,9 @@ home-manager.users.geekiot.systemd.user.targets.default.Unit.Wants = [
 ```json
 "publication": {
   "enabled": false,
-  "repository": "/home/geekiot/projects/darp-prototype-runs",
+  "repository": "/home/geekiot/projects/dvarp-prototype-runs",
   "remote": "origin",
-  "remote_url": "ssh://git@git.geekiot.tech:22267/geekiot/darp-prototype-runs.git",
+  "remote_url": "ssh://git@git.geekiot.tech:22267/geekiot/dvarp-prototype-runs.git",
   "branch": "main"
 }
 ```

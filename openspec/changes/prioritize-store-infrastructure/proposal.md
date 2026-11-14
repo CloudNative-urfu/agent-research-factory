@@ -6,7 +6,7 @@ alongside attack/defence evolution: executable services, evidence handling and r
 
 ## What Changes
 
-- Add infrastructure track I to the frozen DARP roadmap with incremental vertical slices.
+- Add infrastructure track I to the frozen DVARP roadmap with incremental vertical slices.
 - Require a concrete infrastructure task or an evidenced blocking dependency in each plan
   while justified infrastructure gaps remain; independent review rejects generic deferrals.
 - Specify stateful APIs, attachments/approval, synthetic payments, asynchronous events,
@@ -26,4 +26,4 @@ None.
 
 COEVOLUTION.md, OPENSPEC-WORKFLOW.md and documentation. No controller schema changes;
 semantic enforcement is by the independent critic. Existing assessments remain frozen.
-Actual store services are implemented by future approved DARP revisions, not by this change.
+Actual store services are implemented by future approved DVARP revisions, not by this change.

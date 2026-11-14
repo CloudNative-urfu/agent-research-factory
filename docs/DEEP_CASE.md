@@ -8,7 +8,7 @@
 Включается полем `"mode": "deep_case"` в конфигурации новой кампании. Код —
 `nix/_research/deep_case.py`; `factory.py` передаёт ему `init` и `run`, остальные
 команды (`status`, `doctor`) общие. Пример: `examples/campaign.deep_case.json` и
-задание `examples/deep_case.darp.md` для DARP.
+задание `examples/deep_case.dvarp.md` для DVARP.
 
 ## Конфигурация
 
@@ -40,13 +40,13 @@
 ## Запуск
 
 ```sh
-research-factory init ~/.local/share/research-campaigns/darp \
-  --brief "$PWD/examples/deep_case.darp.md" \
+research-factory init ~/.local/share/research-campaigns/dvarp \
+  --brief "$PWD/examples/deep_case.dvarp.md" \
   --config "$PWD/examples/campaign.deep_case.json"
-research-factory doctor ~/.local/share/research-campaigns/darp --live
-systemctl --user start research-campaign@darp
-research-factory status ~/.local/share/research-campaigns/darp
-research-dashboard ~/.local/share/research-campaigns/darp
+research-factory doctor ~/.local/share/research-campaigns/dvarp --live
+systemctl --user start research-campaign@dvarp
+research-factory status ~/.local/share/research-campaigns/dvarp
+research-dashboard ~/.local/share/research-campaigns/dvarp
 ```
 
 `init` клонирует `case.repository` на `case.ref`, копирует документы в `case/` кампании и

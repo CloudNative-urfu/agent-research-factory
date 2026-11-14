@@ -1,4 +1,4 @@
-# Кейс DARP: zero-версия полигона оценки гвардрейлов
+# Кейс DVARP: zero-версия полигона оценки гвардрейлов
 
 Построй исполняемую zero-версию полигона по документам в `case/`:
 `guardrails-as-a-vector-of-attack.md` (рамка и состав), `guardrails_requirements.md`

@@ -5,9 +5,9 @@
 ## 3. Evidence and critique
 - [x] 3.1 Test and implement immutable scope checks and per-task report/critique evidence.
 ## 4. Packaging and activation preparation
-- [x] 4.1 Package OpenSpec, update documentation/source hashes and enable DARP config.
+- [x] 4.1 Package OpenSpec, update documentation/source hashes and enable DVARP config.
 - [x] 4.2 Run offline tests, OpenSpec/Nix checks and build book without activating it.
 
 Verification: 161 offline tests (5 environment skips); 161 VM tests without skips;
 all Nix flake checks including strict OpenSpec validation; book toplevel built.
-Prototype isolation, memory and league remain future DARP revision work, as specified.
+Prototype isolation, memory and league remain future DVARP revision work, as specified.

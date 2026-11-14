@@ -134,7 +134,7 @@ def prepare_inputs(source, root, development=None):
     inputs.mkdir(parents=True, exist_ok=True)
     for relative in manifest:
         path = Path(relative)
-        if path.parts[0] in ('darp_range', 'tests', 'scripts', 'configs', 'corpus', 'case', 'openspec') or (len(path.parts) == 1 and path.suffix in ('.md', '.py', '.toml', '.txt')):
+        if path.parts[0] in ('dvarp_range', 'tests', 'scripts', 'configs', 'corpus', 'case', 'openspec') or (len(path.parts) == 1 and path.suffix in ('.md', '.py', '.toml', '.txt')):
             dest = inputs / 'prototype' / relative
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(snapshot / relative, dest)
